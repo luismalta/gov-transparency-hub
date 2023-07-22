@@ -1,6 +1,7 @@
 import os
 from .postgres_io_manager import PostgresIOManager
 from .s3_io_manager import S3IOManager
+from .postgres_resource import PostgresResource
 from . import PortalTransparenciaScrapper
 
 SHARED_POSTGRES_CONF = {
@@ -21,17 +22,20 @@ PORT = os.environ.get("POSTGRES_PORT", "15432")
 
 RESOURCES_PROD = {
     "postgres_io_manager": PostgresIOManager(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_io_manager": S3IOManager(**SHARED_S3_CONF),
 }
 
 
 RESOURCES_STAGING = {
     "postgres_io_manager": PostgresIOManager(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_io_manager": S3IOManager(**SHARED_S3_CONF),
 }
 
 
 RESOURCES_LOCAL = {
     "postgres_io_manager": PostgresIOManager(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_io_manager": S3IOManager(**SHARED_S3_CONF),
 }

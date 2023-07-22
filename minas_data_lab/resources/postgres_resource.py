@@ -1,0 +1,39 @@
+from dagster import ConfigurableResource
+from contextlib import contextmanager
+from sqlalchemy import create_engine, URL, text
+
+
+@contextmanager
+def connect_postgres(config, schema="public"):
+    url = URL.create(
+        "postgresql+psycopg2",
+        username=config["username"],
+        password=config["password"],
+        host=config["host"],
+        port=config["port"],
+        database=config["database"],
+    )
+
+    conn = None
+    try:
+        conn = create_engine(url).connect()
+        yield conn
+    finally:
+        if conn:
+            conn.close()
+
+
+class PostgresResource(ConfigurableResource):
+    username: str
+    password: str
+    host: str
+    port: int
+    database: str
+
+    @property
+    def _config(self):
+        return self.dict()
+  
+    def execute_query(self, query):
+        with connect_postgres(config=self._config) as engine:
+            return engine.execute(text(query))
