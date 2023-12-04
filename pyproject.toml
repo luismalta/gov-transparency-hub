@@ -8,7 +8,7 @@ packages = [{include = "minas_data_lab"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-dagster = "^1.3.10"
+dagster = ">1.5"
 dagit = "^1.3.10"
 pandas = "^2.0.2"
 sqlalchemy = "^2.0.16"
