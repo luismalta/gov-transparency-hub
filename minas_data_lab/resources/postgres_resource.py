@@ -1,5 +1,6 @@
-from dagster import ConfigurableResource
+import pandas as pd
 from contextlib import contextmanager
+from dagster import ConfigurableResource
 from sqlalchemy import create_engine, URL, text
 
 
@@ -37,3 +38,12 @@ class PostgresResource(ConfigurableResource):
     def execute_query(self, query):
         with connect_postgres(config=self._config) as engine:
             return engine.execute(text(query))
+    
+    def save_dataframe(self, table, dataframe):
+        if isinstance(dataframe, pd.DataFrame):
+            with connect_postgres(config=self._config) as engine:
+                dataframe.to_sql(table, engine, if_exists='append', index=False)
+        else:
+            raise Exception(
+                "PostgresResource only supports pandas DataFrames"
+            )

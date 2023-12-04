@@ -3,7 +3,7 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 from contextlib import contextmanager
-from dagster import ConfigurableIOManager
+from dagster import ConfigurableResource
 
 
 @contextmanager
@@ -22,7 +22,7 @@ def connect_s3(config):
         pass
 
 
-class S3IOManager(ConfigurableIOManager):
+class S3Resource(ConfigurableResource):
     endpoint: str
     port: int
     access_key_id: str
@@ -32,26 +32,16 @@ class S3IOManager(ConfigurableIOManager):
     def _config(self):
         return self.dict()
 
-    def handle_output(self, context, obj):
-        bucket = context.asset_key.path[0]
-        file_name = context.asset_key.path[1]
+    def upload_object(self, bucket, filename, obj):
 
         with connect_s3(config=self._config) as s3_resource:
-            date_str = datetime.now().strftime('%d-%m-%Y-')
-            object_name = date_str + file_name
-
             parquet_buffer = BytesIO()
             obj.to_parquet(parquet_buffer)
-            s3_resource.Object(bucket, object_name).put(Body=parquet_buffer.getvalue())
+            s3_resource.Object(bucket, filename).put(Body=parquet_buffer.getvalue())
     
-    def load_input(self, context):
-        bucket = context.asset_key.path[0]
-        file_name = context.asset_key.path[1]
+    def get_object(self, bucket, filename):
 
         with connect_s3(config=self._config) as s3_resource:
-            date_str = datetime.now().strftime('%d-%m-%Y-')
-            object_name = date_str + file_name
-            
-            obj = s3_resource.Object(bucket, object_name)
+            obj = s3_resource.Object(bucket, filename)
             df = pd.read_parquet(BytesIO(obj.get()['Body'].read()))
             return df

@@ -1,7 +1,9 @@
 import os
-from dagster import Definitions
-from .assets import city_revenue_assets
+from dagster import Definitions, load_assets_from_modules
+from .assets import city_revenue
 from .resources import RESOURCES_LOCAL, RESOURCES_STAGING, RESOURCES_PROD
+
+city_revenue_assets = load_assets_from_modules([city_revenue])
 
 all_assets = [*city_revenue_assets]
 resources_by_deployment_name = {
