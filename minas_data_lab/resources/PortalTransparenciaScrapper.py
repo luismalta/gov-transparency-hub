@@ -2,6 +2,7 @@ import re
 import time
 import json
 import requests
+from .constants import URLS
 
 
 class PortalTransparenciaScrapper():
@@ -13,7 +14,7 @@ class PortalTransparenciaScrapper():
         self.report_id = None
         self.generated_report = ''
 
-        self.BASE_URL = f'https://ptn.{self.city}.mg.gov.br'
+        self.BASE_URL = URLS.get(self.city)
 
     def get_report(self, report_name, report_format, report_arguments):
         self._get_thread_token(report_name)
@@ -26,7 +27,7 @@ class PortalTransparenciaScrapper():
     def _get_thread_token(self, report_name):
         # Pega SHA para a thread de consulta do relatório
         url = self.BASE_URL + f'/{report_name}'
-        response = requests.request("GET", url)
+        response = requests.request("GET", url, verify=False)
         self.thread_sha_token = re.findall('&SHA.*&INT_TOKEN.*"', response.text)[0][:-1]
 
     def _start_report_generate_thread(self, report_arguments):
@@ -37,7 +38,7 @@ class PortalTransparenciaScrapper():
         headers = {
             'content-type': 'application/x-www-form-urlencoded',
         }
-        response = requests.request("POST", url, headers=headers, data=payload)
+        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
         self.report_thread_id = re.findall(r'- (\d+)', response.text)
 
     def _wait_to_generate_report_id(self):
@@ -45,7 +46,7 @@ class PortalTransparenciaScrapper():
         flag = '002 - A thread ainda está em execução.'
         while flag == "002 - A thread ainda está em execução.":
             url = self.BASE_URL + f'/Aguarda_Resultado_Thread.php?INT_THREAD={self.report_thread_id}&DataHora={time.time()}'
-            response = requests.request("GET", url)
+            response = requests.request("GET", url, verify=False)
             flag = response.text
             print(response.text)
             time.sleep(3)
@@ -54,10 +55,10 @@ class PortalTransparenciaScrapper():
    
     def _convert_report_format(self, report_format):
         url = self.BASE_URL + f'/converterPara.php?NM_ARQ={self.report_id}&FMT={report_format.upper()}'
-        response = requests.request("GET", url)
+        response = requests.request("GET", url, verify=False)
         converted_report_id = json.loads(response.text)['NM_ARQ_FIM']
 
         url = self.BASE_URL + converted_report_id
-        response = requests.request("GET", url)
+        response = requests.request("GET", url, verify=False)
         response.encoding = response.apparent_encoding
         self.generated_report = response.text
