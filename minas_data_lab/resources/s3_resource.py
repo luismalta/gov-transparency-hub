@@ -19,7 +19,9 @@ def connect_s3(config):
         )
         yield s3_resource
     finally:
-        pass
+        bucket = s3_resource.Bucket('my-bucket-name')
+        if not bucket.creation_date:
+            s3_resource.create_bucket(Bucket='my-bucket-name')
 
 
 class S3Resource(ConfigurableResource):
@@ -32,16 +34,24 @@ class S3Resource(ConfigurableResource):
     def _config(self):
         return self.dict()
 
-    def upload_object(self, bucket, filename, obj):
+    def upload_object(self, bucket_name, filename, obj):
 
         with connect_s3(config=self._config) as s3_resource:
+            bucket = s3_resource.Bucket(bucket_name)
+            if not bucket.creation_date:
+                s3_resource.create_bucket(Bucket=bucket_name)
+
             parquet_buffer = BytesIO()
             obj.to_parquet(parquet_buffer)
-            s3_resource.Object(bucket, filename).put(Body=parquet_buffer.getvalue())
+            s3_resource.Object(bucket_name, filename).put(Body=parquet_buffer.getvalue())
     
-    def get_object(self, bucket, filename):
+    def get_object(self, bucket_name, filename):
 
         with connect_s3(config=self._config) as s3_resource:
-            obj = s3_resource.Object(bucket, filename)
+            bucket = s3_resource.Bucket(bucket_name)
+            if not bucket.creation_date:
+                s3_resource.create_bucket(Bucket=bucket_name)
+                
+            obj = s3_resource.Object(bucket_name, filename)
             df = pd.read_parquet(BytesIO(obj.get()['Body'].read()))
             return df

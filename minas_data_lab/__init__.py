@@ -1,11 +1,15 @@
 import os
 from dagster import Definitions, load_assets_from_modules
 from .assets import city_revenue
+from .jobs import revenue_update_job
 from .resources import RESOURCES_LOCAL, RESOURCES_STAGING, RESOURCES_PROD
+from .schedules import revenue_update_schedule
 
 city_revenue_assets = load_assets_from_modules([city_revenue])
 
 all_assets = [*city_revenue_assets]
+all_jobs = [revenue_update_job]
+all_schedule = [revenue_update_schedule]
 resources_by_deployment_name = {
     "prod": RESOURCES_PROD,
     "staging": RESOURCES_STAGING,
@@ -17,5 +21,7 @@ deployment_name = os.environ.get("DAGSTER_DEPLOYMENT", "local")
 
 defs = Definitions(
     assets=all_assets,
+    jobs=all_jobs,
+    schedules=all_schedule,
     resources=resources_by_deployment_name[deployment_name],
 )
