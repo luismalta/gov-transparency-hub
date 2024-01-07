@@ -13,3 +13,16 @@ CREATE TABLE "revenue" (
     "historic" VARCHAR(100) NOT NULL,
     "value" DECIMAL NOT NULL
 );
+
+CREATE TABLE "expense" (
+    "effort" VARCHAR(100) NOT NULL,
+    "creditor" VARCHAR(100) NOT NULL,
+    "type" VARCHAR(100) NOT NULL,
+    "bidding_process" VARCHAR(100),
+    "effort_date" DATE,
+    "settlement_date" DATE,
+    "payment_date" DATE,
+    "effort_value" VARCHAR(100),
+    "settlement_value" DECIMAL,
+    "paid_value" DECIMAL
+);

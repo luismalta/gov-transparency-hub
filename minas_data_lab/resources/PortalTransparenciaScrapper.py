@@ -2,7 +2,10 @@ import re
 import time
 import json
 import requests
-from .constants import URLS
+import unicodedata
+from bs4 import BeautifulSoup
+
+from .constants import URLS, DETAILED_EXPENSE_FIELDS
 
 
 class PortalTransparenciaScrapper():
@@ -62,3 +65,24 @@ class PortalTransparenciaScrapper():
         response = requests.request("GET", url, verify=False)
         response.encoding = response.apparent_encoding
         self.generated_report = response.text
+
+
+
+    def get_detailed_expense(self, expense_number, year):
+
+        url = self.BASE_URL + f"/Relatorios/Detalhamento_Despesa.php?ID8_DESP={expense_number}&STR_EXR_EXR={year}&CHAR_ID_EMP=1&LG_OP_DESP=S"
+        response = requests.request("GET", url, verify=False)
+        soup_page = BeautifulSoup(response.content, 'html.parser', from_encoding='UTF-8')
+
+        detailed_expense = {
+            "Número": expense_number,
+            "Exercício": year,
+        }
+        for field_name in DETAILED_EXPENSE_FIELDS:
+            field = soup_page.find('td', string=re.compile(field_name + ":"))
+            field_value = field.text if field else '-'
+            field_value = unicodedata.normalize("NFKD", field_value)
+            field_name = unicodedata.normalize("NFKD", field_name)
+            detailed_expense[field_name] = field_value.replace(field_name + ": ", "")
+
+        return detailed_expense

@@ -36,3 +36,23 @@ URLS = {
     "capelanova": "http://transparencia.capelanova.mg.leg.br",
     
 }
+
+DETAILED_EXPENSE_FIELDS = [
+    "Tipo",
+    "Data do Empenho",
+    "Liquidação",
+    "Pagamento",
+    "Unidade",
+    "Função",
+    "Subfunção",
+    "Programa",
+    "Projeto Atividade",
+    "Categoria Econômica",
+    "Fonte de Recurso",
+    "CO TCE",
+    "CO AUX",
+    "Valor",
+    "Beneficiário",
+    "CPF/CNPJ",
+    "Histórico",
+]
