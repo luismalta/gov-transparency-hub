@@ -1,4 +1,5 @@
 CREATE DATABASE minas_data_lab;
+CREATE DATABASE dagster;
 
 \c minas_data_lab;
 
