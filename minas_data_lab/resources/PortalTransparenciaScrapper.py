@@ -66,13 +66,17 @@ class PortalTransparenciaScrapper():
         response.encoding = response.apparent_encoding
         self.generated_report = response.text
 
-
-
     def get_detailed_expense(self, expense_number, year):
 
         url = self.BASE_URL + f"/Relatorios/Detalhamento_Despesa.php?ID8_DESP={expense_number}&STR_EXR_EXR={year}&CHAR_ID_EMP=1&LG_OP_DESP=S"
         response = requests.request("GET", url, verify=False)
         soup_page = BeautifulSoup(response.content, 'html.parser', from_encoding='UTF-8')
+
+        # TODO: Understand the LG_OP_DESP variable so as not to need this brute force check
+        if soup_page.find('p', string=re.compile("Despesa não encontrada.")):
+            url = self.BASE_URL + f"/Relatorios/Detalhamento_Despesa.php?ID8_DESP={expense_number}&STR_EXR_EXR={year}&CHAR_ID_EMP=1&LG_OP_DESP=N"
+            response = requests.request("GET", url, verify=False)
+            soup_page = BeautifulSoup(response.content, 'html.parser', from_encoding='UTF-8')
 
         detailed_expense = {
             "Número": expense_number,

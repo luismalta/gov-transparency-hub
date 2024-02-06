@@ -7,18 +7,13 @@ from dagster import Output, asset, MetadataValue
 from minas_data_lab.resources import PostgresResource, S3Resource
 from minas_data_lab.resources.PortalTransparenciaScrapper import PortalTransparenciaScrapper
 from minas_data_lab.partitions import daily_city_partition
-
-SELECT_LAST_REVENUE_DATE_FROM_MONTH = """
-    select date
-    from expense
-    where to_char(date, 'YYYY-MM') = '{}'
-    order by date desc
-    limit 1
-"""
+from minas_data_lab.assets.constants import CITY_EXPENSE_COLUMNS_RENAME
+from minas_data_lab.assets.utils import format_object_name
 
 
 @asset(
-    partitions_def=daily_city_partition
+    partitions_def=daily_city_partition,
+    group_name="expense"
 )
 def city_expense_file(context, s3_resource: S3Resource):
     """
@@ -26,6 +21,7 @@ def city_expense_file(context, s3_resource: S3Resource):
     """
     dimensions = context.partition_key.keys_by_dimension
     city_name = dimensions.get('city')
+    bucket_name = city_name
 
     partition_date_str = dimensions.get('date')
     year_to_fetch = partition_date_str[:4]
@@ -37,13 +33,14 @@ def city_expense_file(context, s3_resource: S3Resource):
 
     city_revenue_df = pd.read_csv(StringIO(report), index_col=False)
 
-    bucket = city_name
-    object_name = f"expense/{city_name}-expense-{partition_date_str}"
-    s3_resource.upload_object(bucket, object_name, city_revenue_df)
+    object_name = format_object_name('summarized_expense', bucket_name, partition_date_str)
+    s3_resource.upload_object(bucket_name, object_name, city_revenue_df)
+
 
 @asset(
     deps=["city_expense_file"],
-    partitions_def=daily_city_partition
+    partitions_def=daily_city_partition,
+    group_name="expense"
 )
 def city_expense(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
     """
@@ -52,64 +49,43 @@ def city_expense(context, s3_resource: S3Resource, postgres_resource: PostgresRe
     dimensions = context.partition_key.keys_by_dimension
     city_name = dimensions.get('city')
     partition_date_str = dimensions.get('date')
+    bucket_name = city_name
 
-    bucket = city_name
-    object_name = f"expense/{city_name}-expense-{partition_date_str}"
-    city_expense = s3_resource.get_object(bucket, object_name)
-
-
-    columns_rename = {
-        'Credor': 'creditor',
-        'Empenho': 'effort',
-        'Tipo': 'type',
-        'Processo Licitatório': 'bidding_process',
-        'Data Empenho': 'effort_date',
-        'Data Liquidação': 'settlement_date',
-        'Data Pagamento': 'payment_date',
-        'Valor Empenhado': 'effort_value',
-        'Valor Liquidado': 'settlement_value',
-        'Valor Pago': 'paid_value',
-    }
+    object_name = format_object_name('summarized_expense', bucket_name, partition_date_str)
+    city_expense = s3_resource.get_object(bucket_name, object_name)
 
     city_expense.dropna(subset=['Credor'], how='all', inplace=True)
     city_expense.query('not Credor.str.contains("Total")', engine='python', inplace=True)
     city_expense.query('not Credor.str.contains("Clique na lupa para mais informações")', engine='python', inplace=True)
-    city_expense.rename(columns=columns_rename, inplace=True)
-    city_expense.drop('Unnamed: 10', axis=1, inplace=True)
-
-    city_expense['effort_date'] = pd.to_datetime(city_expense['effort_date'], format="%d/%m/%Y")
-    city_expense['settlement_date'] = pd.to_datetime(city_expense['settlement_date'], format="%d/%m/%Y")
-    city_expense['payment_date'] = pd.to_datetime(city_expense['payment_date'], format="%d/%m/%Y")
 
     scrapper = PortalTransparenciaScrapper(city_name)
 
     detailed_expenses_list = []
     for index, row in city_expense.iterrows():
-        expense_number, expense_year = row['effort'].split(" / ")
+        expense_number, expense_year = row['Empenho'].split(" / ")
         expense_number.replace("-", "")
         detailed_expenses = scrapper.get_detailed_expense(expense_number, expense_year)
         detailed_expenses_list.append(detailed_expenses)
-
+    
     detailed_expenses_df = pd.DataFrame.from_dict(detailed_expenses_list)
+    if detailed_expenses_list:
 
-    object_name = f"detailed_expens/{city_name}-expense-{partition_date_str}"
-    s3_resource.upload_object(bucket, object_name, detailed_expenses_df)
+        detailed_expenses_df.rename(columns=CITY_EXPENSE_COLUMNS_RENAME, inplace=True)
 
-    # query_cursor = postgres_resource.execute_query(
-    #     SELECT_LAST_REVENUE_DATE_FROM_MONTH.format(partition_date_str[:7])
-    # )
+        detailed_expenses_df['effort_date'] = pd.to_datetime(detailed_expenses_df['effort_date'], format="%d/%m/%Y")
+        detailed_expenses_df['settlement_date'] = pd.to_datetime(detailed_expenses_df['settlement_date'], format="%d/%m/%Y")
+        detailed_expenses_df['payment_date'] = pd.to_datetime(detailed_expenses_df['payment_date'], format="%d/%m/%Y")
 
-    # last_revenue = False
-    # try:
-    #     last_revenue = query_cursor.one()
-    # except NoResultFound:
-    #     context.log.info("No record of previous revenue found in database")
-    # if last_revenue:
-    #     last_revenue_date = last_revenue[0]
-    #     city_revenue.query(f'date > "{last_revenue_date}"', inplace=True)
+        detailed_expenses_df['value'] = detailed_expenses_df['value'].replace('\.', '',regex=True)
+        detailed_expenses_df['value'] = detailed_expenses_df['value'].replace(',', '.', regex=True)
+        detailed_expenses_df.astype({'value': 'float'})
 
+        detailed_expenses_df['city'] = city_name
 
-    # postgres_resource.save_dataframe('expense', detailed_expenses_df)
+        object_name = format_object_name('expense', bucket_name, partition_date_str)
+        s3_resource.upload_object(bucket_name, object_name, detailed_expenses_df)
+
+        postgres_resource.save_dataframe('expense', detailed_expenses_df)
 
     return Output(
         detailed_expenses_df,

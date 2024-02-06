@@ -20,6 +20,9 @@ beautifulsoup4 = "^4.12.2"
 dagster-postgres = "^0.21.14"
 
 
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
