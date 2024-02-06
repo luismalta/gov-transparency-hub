@@ -1,7 +1,7 @@
-CREATE DATABASE minas_data_lab;
+CREATE DATABASE gov_transparency_hub;
 CREATE DATABASE dagster;
 
-\c minas_data_lab;
+\c gov_transparency_hub;
 
 CREATE TABLE "revenue" (
     "id" SERIAL PRIMARY KEY,

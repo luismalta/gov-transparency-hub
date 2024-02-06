@@ -7,7 +7,7 @@ from . import PortalTransparenciaScrapper
 SHARED_POSTGRES_CONF = {
     "username": EnvVar("POSTGRES_USER").get_value("postgres"),
     "password": EnvVar("POSTGRES_PASSWORD").get_value("postgres"),
-    "database": EnvVar("POSTGRES_DATABASE").get_value("minas_data_lab"),
+    "database": EnvVar("POSTGRES_DATABASE").get_value("gov_transparency_hub"),
 }
 
 SHARED_S3_CONF = {

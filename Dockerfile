@@ -6,7 +6,7 @@ RUN pip install dagster-webserver dagster-postgres dagster-aws
 
 # Copy your code and workspace to /opt/dagster/app
 COPY workspace.yaml pyproject.toml README.md /opt/dagster/app/
-COPY minas_data_lab /opt/dagster/app/minas_data_lab
+COPY gov_transparency_hub /opt/dagster/app/gov_transparency_hub
 
 ENV DAGSTER_HOME=/opt/dagster/dagster_home/
 

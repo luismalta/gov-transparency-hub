@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "minas-data-lab"
+name = "gov_transparency_hub"
 version = "0.1.0"
 description = ""
 authors = ["Luis Malta <luiso.malta@gmail.com>"]
 readme = "README.md"
-packages = [{include = "minas_data_lab"}]
+packages = [{include = "gov_transparency_hub"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -28,4 +28,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.dagster]
-module_name = "minas_data_lab"
+module_name = "gov_transparency_hub"

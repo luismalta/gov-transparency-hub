@@ -4,11 +4,11 @@ from io import StringIO, BytesIO
 from sqlalchemy.exc import NoResultFound
 from dagster import Output, asset, MetadataValue
 
-from minas_data_lab.resources import PostgresResource, S3Resource
-from minas_data_lab.resources.PortalTransparenciaScrapper import PortalTransparenciaScrapper
-from minas_data_lab.partitions import daily_city_partition
-from minas_data_lab.assets.constants import CITY_EXPENSE_COLUMNS_RENAME
-from minas_data_lab.assets.utils import format_object_name
+from gov_transparency_hub.resources import PostgresResource, S3Resource
+from gov_transparency_hub.resources.PortalTransparenciaScrapper import PortalTransparenciaScrapper
+from gov_transparency_hub.partitions import daily_city_partition
+from gov_transparency_hub.assets.constants import CITY_EXPENSE_COLUMNS_RENAME
+from gov_transparency_hub.assets.utils import format_object_name
 
 
 @asset(

@@ -5,7 +5,7 @@ services:
   #   ports:
   #     - "3000:3000"
   #   volumes:
-  #     - ./minas_data_lab/:/opt/dagster/app/minas_data_lab/
+  #     - ./gov_transparency_hub/:/opt/dagster/app/gov_transparency_hub/
   #     - ./workspace.yaml:/opt/dagster/app/workspace.yaml
   #     - ./dagster.yaml:/opt/dagster/app/dagster.yaml
   # dagster_daemon:
