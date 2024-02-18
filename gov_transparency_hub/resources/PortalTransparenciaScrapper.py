@@ -28,13 +28,13 @@ class PortalTransparenciaScrapper:
         return self.generated_report
 
     def _get_thread_token(self, report_name):
-        # Pega SHA para a thread de consulta do relatório
+        # Get SHA for the report query thread
         url = self.BASE_URL + f"/{report_name}"
         response = requests.request("GET", url, verify=False)
         self.thread_sha_token = re.findall('&SHA.*&INT_TOKEN.*"', response.text)[0][:-1]
 
     def _start_report_generate_thread(self, report_arguments):
-        # Inicia thread para gerar relatório
+        # Start thread to generate report
         url = (
             self.BASE_URL
             + f"/gerar_relatorio.php?Data={time.time()}{self.thread_sha_token}"
@@ -50,7 +50,7 @@ class PortalTransparenciaScrapper:
         self.report_thread_id = re.findall(r"- (\d+)", response.text)
 
     def _wait_to_generate_report_id(self):
-        # Checa se a thread de consulta foi finalizada
+        # Check if the query thread has finished
         flag = "002 - A thread ainda está em execução."
         while flag == "002 - A thread ainda está em execução.":
             url = (
