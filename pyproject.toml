@@ -18,6 +18,7 @@ pyarrow = "^12.0.1"
 fastparquet = "^2023.4.0"
 beautifulsoup4 = "^4.12.2"
 dagster-postgres = "^0.21.14"
+pre-commit = "^3.6.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -29,3 +30,20 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.dagster]
 module_name = "gov_transparency_hub"
+
+[tool.black]
+line-length = 89
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
