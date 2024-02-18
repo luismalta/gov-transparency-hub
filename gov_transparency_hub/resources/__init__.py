@@ -21,21 +21,18 @@ HOST = EnvVar("POSTGRES_HOST").get_value("localhost")
 PORT = EnvVar("POSTGRES_PORT").get_value("15432")
 
 RESOURCES_PROD = {
-    "postgres_resource": PostgresResource(
-        host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_resource": S3Resource(**SHARED_S3_CONF),
 }
 
 
 RESOURCES_STAGING = {
-    "postgres_resource": PostgresResource(
-        host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_resource": S3Resource(**SHARED_S3_CONF),
 }
 
 
 RESOURCES_LOCAL = {
-    "postgres_resource": PostgresResource(
-        host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
+    "postgres_resource": PostgresResource(host=HOST, port=PORT, **SHARED_POSTGRES_CONF),
     "s3_resource": S3Resource(**SHARED_S3_CONF),
 }

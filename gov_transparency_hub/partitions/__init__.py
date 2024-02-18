@@ -1,7 +1,7 @@
 from dagster import (
     DailyPartitionsDefinition,
     StaticPartitionsDefinition,
-    MultiPartitionsDefinition
+    MultiPartitionsDefinition,
 )
 from ..assets import constants
 
@@ -9,12 +9,10 @@ from ..assets import constants
 start_date = constants.START_DATE
 
 daily_partition = DailyPartitionsDefinition(
-  start_date=start_date,
+    start_date=start_date,
 )
 
-city_partition = StaticPartitionsDefinition(
-    constants.CITY_LIST
-)
+city_partition = StaticPartitionsDefinition(constants.CITY_LIST)
 
 
 daily_city_partition = MultiPartitionsDefinition(

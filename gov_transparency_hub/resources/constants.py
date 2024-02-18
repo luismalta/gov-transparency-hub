@@ -6,7 +6,6 @@ URLS = {
     "cbm": "https://ptn.cbm.mg.gov.br",
     "itutinga": "https://ptn.itutinga.mg.gov.br",
     "carrancas": "https://ptn.carrancas.mg.gov.br",
-
     "santacruzdeminas": "https://pt.santacruzdeminas.mg.gov.br",
     "ritapolis": "https://pt.ritapolis.mg.gov.br",
     "prados": "https://pt.prados.mg.gov.br",
@@ -27,14 +26,10 @@ URLS = {
     "barroso": "https://pt.barroso.mg.gov.br",
     "municipioantoniocarlos": "https://pt.municipioantoniocarlos.mg.gov.br",
     "alfredovasconcelos": "https://pt.alfredovasconcelos.mg.gov.br",
-
-    
     "santanadogarambeu": "http://pt.santanadogarambeu.cam.mg.gov.br",
     "luminarias": "http://pt.luminarias.cam.mg.gov.br",
-
     "ijaci": "http://transparencia.ijaci.mg.leg.br",
     "capelanova": "http://transparencia.capelanova.mg.leg.br",
-    
 }
 
 DETAILED_EXPENSE_FIELDS = [
