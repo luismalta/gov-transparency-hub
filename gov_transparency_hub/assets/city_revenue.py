@@ -1,28 +1,26 @@
-import pandas as pd
-from datetime import datetime
-from io import StringIO, BytesIO
-from sqlalchemy.exc import NoResultFound
+import dlt
+from typing import Any, Optional
+from collections.abc import Mapping
 from dagster import Output, asset, MetadataValue
+from psycopg2.errors import UndefinedTable
+from dagster_dbt import dbt_assets, DbtCliResource, DagsterDbtTranslator
 
-from gov_transparency_hub.resources import PostgresResource, S3Resource
+from gov_transparency_hub.resources import PostgresResource, S3Resource, dbt_project
 from gov_transparency_hub.resources.PortalTransparenciaScrapper import (
     PortalTransparenciaScrapper,
 )
 from gov_transparency_hub.partitions import daily_city_partition
 from gov_transparency_hub.assets.utils import format_object_name
-from gov_transparency_hub.assets.constants import CITY_REVENUE_COLUMNS_RENAME
 
-SELECT_LAST_REVENUE_DATE_FROM_MONTH = """
-    select date
-    from revenue
-    where to_char(date, 'YYYY-MM') = '{}' and city = '{}'
-    order by date desc
-    limit 1
+DELETE_REVENUE_FROM_CURRENT_MONTH = """
+    DELETE FROM raw.revenue_details
+    WHERE municipio = '{}' 
+    AND Data like '%/{}/{}'
 """
 
 
-@asset(partitions_def=daily_city_partition, group_name="revenue")
-def city_revenue_file(context, s3_resource: S3Resource):
+@asset(partitions_def=daily_city_partition, group_name="revenue", kinds=["s3"])
+def revenue_html_report(context, s3_resource: S3Resource):
     """
     Raw report dowloaded from Portal da Transparencia
     """
@@ -43,18 +41,16 @@ def city_revenue_file(context, s3_resource: S3Resource):
         "URL=Tempo_Real_Receitas",
     ]
     scrapper = PortalTransparenciaScrapper(city_name)
-    report = scrapper.get_report("Tempo_Real_Receitas", "csv", payload)
+    revenue_html_report = scrapper.get_report("Tempo_Real_Receitas", "html", payload)
 
-    city_revenue_df = pd.read_csv(StringIO(report), index_col=False)
-
-    object_name = format_object_name("revenue", bucket_name, partition_date_str)
-    s3_resource.upload_object(bucket_name, object_name, city_revenue_df)
+    object_name = format_object_name("revenue_html", bucket_name, partition_date_str)
+    s3_resource.upload_html(bucket_name, object_name, revenue_html_report)
 
 
 @asset(
-    deps=["city_revenue_file"], partitions_def=daily_city_partition, group_name="revenue"
+    deps=["revenue_html_report"], partitions_def=daily_city_partition, group_name="revenue", kinds=["s3"]
 )
-def city_revenue(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+def extract_revenue_deatils_df(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
     """
     Raw city revenue dataset, loaded into Postgres database
     """
@@ -62,40 +58,81 @@ def city_revenue(context, s3_resource: S3Resource, postgres_resource: PostgresRe
     city_name = dimensions.get("city")
     partition_date_str = dimensions.get("date")
 
-    bucket = city_name
-    object_name = f"revenue/{city_name}-revenue-{partition_date_str}"
-    city_revenue_df = s3_resource.get_object(bucket, object_name)
+    bucket_name = city_name
+    object_name = f"revenue_html/{city_name}-revenue_html-{partition_date_str}"
+    revenue_html_report = s3_resource.download_html(bucket_name, object_name)
 
-    city_revenue_df.query(
-        'not Data.str.contains("TOTAL")', engine="python", inplace=True
+    scrapper = PortalTransparenciaScrapper(city_name)
+    revenue_df = scrapper.extract_revenue_deatils(revenue_html_report)
+
+    object_name = format_object_name(
+        "revenue_details_df", bucket_name, partition_date_str
     )
-    city_revenue_df.query(
-        'not Data.str.contains("Total do Dia")', engine="python", inplace=True
-    )
-    city_revenue_df.rename(columns=CITY_REVENUE_COLUMNS_RENAME, inplace=True)
+    s3_resource.upload_object(bucket_name, object_name, revenue_df)
 
-    city_revenue_df["date"] = pd.to_datetime(city_revenue_df["date"], format="%d/%m/%Y")
-    city_revenue_df["city"] = city_name
-
-    query_cursor = postgres_resource.execute_query(
-        SELECT_LAST_REVENUE_DATE_FROM_MONTH.format(partition_date_str[:7], city_name)
-    )
-
-    last_revenue = False
-    try:
-        last_revenue = query_cursor.one()
-    except NoResultFound:
-        context.log.info("No record of previous revenue found in database")
-    if last_revenue:
-        last_revenue_date = last_revenue[0]
-        city_revenue_df.query(f'date > "{last_revenue_date}"', inplace=True)
-
-    postgres_resource.save_dataframe("revenue", city_revenue_df)
 
     return Output(
-        city_revenue_df,
+        revenue_df,
         metadata={
-            "Count": len(city_revenue_df),
-            "preview": MetadataValue.md(city_revenue_df.head().to_markdown()),
+            "Count": len(revenue_df),
+            "preview": MetadataValue.md(revenue_df.head().to_markdown()),
         },
     )
+
+@asset(deps=["extract_revenue_deatils_df"], partitions_def=daily_city_partition, group_name="revenue", kinds=["s3", "dlt", "postgres"])
+def load_raw_revenue_details(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+    """
+    Create the raw table in database combining all the revenue details DataFrames
+    """
+    dimensions = context.partition_key.keys_by_dimension
+    city_name = dimensions.get("city")
+    partition_date_str = dimensions.get("date")
+    bucket_name = city_name
+
+    object_name = format_object_name(
+        "revenue_details_df", bucket_name, partition_date_str
+    )
+
+    revenue_details_df = s3_resource.get_object(bucket_name, object_name)
+
+    if revenue_details_df.empty:
+        return
+
+    revenue_details_df["municipio"] = city_name
+
+    year_to_fetch = partition_date_str[:4]
+    month_to_fetch = partition_date_str[5:7]
+
+    try:
+        query_cursor = postgres_resource.execute_query(
+            DELETE_REVENUE_FROM_CURRENT_MONTH.format(city_name, month_to_fetch, year_to_fetch)
+        )
+    except Exception:
+        pass
+
+    pipeline = dlt.pipeline(
+        pipeline_name="load_raw_revenue_details",
+        destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
+        dataset_name="raw",
+    )
+
+    load_info = pipeline.run(
+        data=revenue_details_df,
+        table_name="revenue_details",
+        write_disposition={"disposition": "merge", "strategy": "upsert"},
+        primary_key=["id", "municipio"],
+    )
+
+class CustomDagsterDbtTranslator(DagsterDbtTranslator):
+        def get_group_name(
+            self, dbt_resource_props: Mapping[str, Any]
+        ) -> Optional[str]:
+            return "revenue"
+            
+@dbt_assets(
+    manifest=dbt_project.manifest_path,
+    dagster_dbt_translator=CustomDagsterDbtTranslator(),
+    select="revenue_*",
+)
+def dbt_models_revenue(context, dbt: DbtCliResource):
+    yield from dbt.cli(["build"], context=context).stream()

@@ -1,4 +1,4 @@
-START_DATE = "2023-01-01"
+START_DATE = "2025-01-01"
 CITY_LIST = [
     "tiradentes",
     "saojoaodelrei",
@@ -53,6 +53,10 @@ CITY_EXPENSE_COLUMNS_RENAME = {
     "Beneficiário": "creditor",
     "CPF/CNPJ": "cpf_cnpj",
     "Histórico": "history",
+    "Licitação": "bidding",
+    "Modalidade": "modality",
+    "Requisição de Compra": "purchase_requisition",
+    "Referência": "reference",
 }
 
 CITY_REVENUE_COLUMNS_RENAME = {
