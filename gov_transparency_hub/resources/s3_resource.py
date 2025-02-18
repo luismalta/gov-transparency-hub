@@ -55,3 +55,19 @@ class S3Resource(ConfigurableResource):
             obj = s3_resource.Object(bucket_name, filename)
             df = pd.read_parquet(BytesIO(obj.get()["Body"].read()))
             return df
+
+    def upload_html(self, bucket_name, filename, html):
+        with connect_s3(config=self._config) as s3_resource:
+            s3_resource.Object(bucket_name, filename).put(Body=html)
+    
+    def download_html(self, bucket_name, filename):
+        with connect_s3(config=self._config) as s3_resource:
+            obj = s3_resource.Object(bucket_name, filename)
+            html_content = obj.get()["Body"].read().decode('utf-8')
+            return html_content
+    
+    def download_folder_contents(self, bucket_name, folder_name):
+        with connect_s3(config=self._config) as s3_resource:
+            bucket = s3_resource.Bucket(bucket_name)
+            objects = bucket.objects.filter(Prefix=folder_name)
+            return [obj.get()["Body"].read() for obj in objects]
