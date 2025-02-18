@@ -51,3 +51,22 @@ DETAILED_EXPENSE_FIELDS = [
     "CPF/CNPJ",
     "Histórico",
 ]
+
+ITEM_EXPENSE_FIELDS = [
+    "Produto",
+    "Especificação",
+    "Complemento",
+    "Unidade",
+    "Marca",
+    "Quantidade",
+    "Valor Unitário",
+    "Total"
+]
+
+INVOICE_EXPENSE_FIELDS = [
+    "Nota Fiscal",
+    "Série",
+    "Emissão",
+    "Vencimento",
+    "Chave de Acesso",
+]
