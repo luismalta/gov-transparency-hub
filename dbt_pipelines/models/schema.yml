@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: expense_datails
+    description: Detalhes das despesas do municípios
+    columns:
+      - name: numero
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: funcao
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: ano
+        data_type: character varying
+      - name: tipo
+        data_type: character varying
+      - name: data_empenho
+        data_type: date
+      - name: data_liquidacao
+        data_type: date
+      - name: data_pagamento
+        data_type: date
+      - name: unidade
+        data_type: character varying
+      - name: subfuncao
+        data_type: character varying
+      - name: programa
+        data_type: character varying
+      - name: atividade
+        data_type: character varying
+      - name: categoria_economica
+        data_type: character varying
+      - name: fonte_recurso
+        data_type: character varying
+      - name: co_tce
+        data_type: character varying
+      - name: co_aux
+        data_type: character varying
+      - name: valor
+        data_type: numeric
+      - name: beneficiario
+        data_type: character varying
+      - name: cpf_cnpj
+        data_type: character varying
+      - name: historico
+        data_type: character varying
+      - name: municipio
+        data_type: character varying
+
+  - name: expense_itens
+    description: Itens das despesas do municípios
+    columns:
+      - name: item
+        description: Número do item no detalhamento da despesa
+        data_type: character varying
+      - name: numero_despesa
+        description: Despesa que o item está associado
+        data_type: character varying
+      - name: ano_despesa
+        description: Ano da despesa que o item está associado
+        data_type: character varying
+      - name: complemento
+        data_type: character varying
+      - name: unidade
+        data_type: character varying
+      - name: marca
+        data_type: character varying
+      - name: quantidade
+        data_type: numeric
+      - name: valor_unitario
+        data_type: numeric
+      - name: total
+        data_type: numeric
+      - name: municipio
+        data_type: character varying
+
+  - name: expense_invoices
+    description: Notas fiscais das despesas do municípios
+  
+  - name: revenue_details
+    description: Detalhes das receitas do município

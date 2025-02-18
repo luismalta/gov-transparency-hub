@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: dagster
+    schema: raw
+    tables:
+      - name: expense_details
+        meta:
+          dagster:
+            asset_key: ["load_raw_expense_details"]
+      
+      - name: expense_itens
+        meta:
+          dagster:
+            asset_key: ["load_raw_expense_itens"]
+      
+      - name: expense_invoices
+        meta:
+          dagster:
+            asset_key: ["load_raw_expense_invoices"]
+
+      - name: revenue_details
+        meta:
+          dagster:
+            asset_key: ["load_raw_revenue_details"]
