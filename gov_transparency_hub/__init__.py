@@ -1,6 +1,5 @@
 import os
 from dagster import Definitions, load_assets_from_modules
-from dagster_dbt import dbt_assets, DbtCliResource, DbtProject
 from .assets import city_revenue, city_expenses
 from .jobs import revenue_update_job, expense_update_job
 from .resources import RESOURCES_LOCAL, RESOURCES_STAGING, RESOURCES_PROD

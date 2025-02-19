@@ -2,7 +2,6 @@ import dlt
 from typing import Any, Optional
 from collections.abc import Mapping
 from dagster import Output, asset, MetadataValue
-from psycopg2.errors import UndefinedTable
 from dagster_dbt import dbt_assets, DbtCliResource, DagsterDbtTranslator
 
 from gov_transparency_hub.resources import PostgresResource, S3Resource, dbt_project
@@ -48,9 +47,14 @@ def revenue_html_report(context, s3_resource: S3Resource):
 
 
 @asset(
-    deps=["revenue_html_report"], partitions_def=daily_city_partition, group_name="revenue", kinds=["s3"]
+    deps=["revenue_html_report"],
+    partitions_def=daily_city_partition,
+    group_name="revenue",
+    kinds=["s3"],
 )
-def extract_revenue_deatils_df(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+def extract_revenue_deatils_df(
+    context, s3_resource: S3Resource, postgres_resource: PostgresResource
+):
     """
     Raw city revenue dataset, loaded into Postgres database
     """
@@ -70,7 +74,6 @@ def extract_revenue_deatils_df(context, s3_resource: S3Resource, postgres_resour
     )
     s3_resource.upload_object(bucket_name, object_name, revenue_df)
 
-
     return Output(
         revenue_df,
         metadata={
@@ -79,8 +82,16 @@ def extract_revenue_deatils_df(context, s3_resource: S3Resource, postgres_resour
         },
     )
 
-@asset(deps=["extract_revenue_deatils_df"], partitions_def=daily_city_partition, group_name="revenue", kinds=["s3", "dlt", "postgres"])
-def load_raw_revenue_details(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+
+@asset(
+    deps=["extract_revenue_deatils_df"],
+    partitions_def=daily_city_partition,
+    group_name="revenue",
+    kinds=["s3", "dlt", "postgres"],
+)
+def load_raw_revenue_details(
+    context, s3_resource: S3Resource, postgres_resource: PostgresResource
+):
     """
     Create the raw table in database combining all the revenue details DataFrames
     """
@@ -104,8 +115,10 @@ def load_raw_revenue_details(context, s3_resource: S3Resource, postgres_resource
     month_to_fetch = partition_date_str[5:7]
 
     try:
-        query_cursor = postgres_resource.execute_query(
-            DELETE_REVENUE_FROM_CURRENT_MONTH.format(city_name, month_to_fetch, year_to_fetch)
+        postgres_resource.execute_query(
+            DELETE_REVENUE_FROM_CURRENT_MONTH.format(
+                city_name, month_to_fetch, year_to_fetch
+            )
         )
     except Exception:
         pass
@@ -116,19 +129,19 @@ def load_raw_revenue_details(context, s3_resource: S3Resource, postgres_resource
         dataset_name="raw",
     )
 
-    load_info = pipeline.run(
+    pipeline.run(
         data=revenue_details_df,
         table_name="revenue_details",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
         primary_key=["id", "municipio"],
     )
 
+
 class CustomDagsterDbtTranslator(DagsterDbtTranslator):
-        def get_group_name(
-            self, dbt_resource_props: Mapping[str, Any]
-        ) -> Optional[str]:
-            return "revenue"
-            
+    def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> Optional[str]:
+        return "revenue"
+
+
 @dbt_assets(
     manifest=dbt_project.manifest_path,
     dagster_dbt_translator=CustomDagsterDbtTranslator(),

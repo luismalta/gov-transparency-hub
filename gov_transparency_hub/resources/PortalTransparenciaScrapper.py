@@ -6,7 +6,12 @@ import unicodedata
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from .constants import URLS, DETAILED_EXPENSE_FIELDS, ITEM_EXPENSE_FIELDS, INVOICE_EXPENSE_FIELDS
+from .constants import (
+    URLS,
+    DETAILED_EXPENSE_FIELDS,
+    ITEM_EXPENSE_FIELDS,
+    INVOICE_EXPENSE_FIELDS,
+)
 
 
 class PortalTransparenciaScrapper:
@@ -77,8 +82,7 @@ class PortalTransparenciaScrapper:
         self.report_id = re.findall(r"- /Dados/(.*).html", response.text)[0]
 
     def _convert_report_format(self, report_format):
-
-        if report_format != 'html':
+        if report_format != "html":
             url = (
                 self.BASE_URL
                 + f"/converterPara.php?NM_ARQ={self.report_id}&FMT={report_format.upper()}"
@@ -88,11 +92,11 @@ class PortalTransparenciaScrapper:
             url = self.BASE_URL + converted_report_id
         else:
             url = self.BASE_URL + f"/Dados/{self.report_id}.html"
-            
+
         response = requests.request("GET", url, verify=False)
         response.encoding = response.apparent_encoding
         self.generated_report = response.text
-    
+
     def extract_revenue_deatils(self, revenue_html_report):
         """
         Extracts revenue details from a HTML report.
@@ -103,9 +107,11 @@ class PortalTransparenciaScrapper:
         Returns:
             list: A list of dictionaries, each containing the extracted revenue details.
         """
-        soup_page = BeautifulSoup(revenue_html_report, "html.parser", from_encoding="UTF-8")
+        soup_page = BeautifulSoup(
+            revenue_html_report, "html.parser", from_encoding="UTF-8"
+        )
 
-        table = soup_page.find_all('table')
+        table = soup_page.find_all("table")
         revenue_df = pd.read_html(str(table))[0]
 
         revenue_df.query(
@@ -115,12 +121,9 @@ class PortalTransparenciaScrapper:
             'not Data.str.contains("Total do Dia")', engine="python", inplace=True
         )
 
-        revenue_df["id"] = revenue_df.apply(
-            lambda x: time.time(), axis=1
-        )
+        revenue_df["id"] = revenue_df.apply(lambda x: time.time(), axis=1)
 
         return revenue_df
-    
 
     def get_expense_details_pages(self, expense_html):
         """
@@ -135,16 +138,18 @@ class PortalTransparenciaScrapper:
 
         expense_details_urls = self._extract_expense_details_urls(expense_html)
         return self._download_expense_details_page(expense_details_urls)
-    
+
     def _extract_expense_details_urls(self, expense_html):
         soup_page = BeautifulSoup(expense_html, "html.parser", from_encoding="UTF-8")
 
-        href_elemets = soup_page.find_all('a', title='Clique para obter mais detalhes')
+        href_elemets = soup_page.find_all("a", title="Clique para obter mais detalhes")
 
         expense_details_urls = []
         for element in href_elemets:
-            expense_details_urls.append(re.search("javascript:abrir\('(.*)'\)", element['href']).group(1))
-        
+            expense_details_urls.append(
+                re.search("javascript:abrir\('(.*)'\)", element["href"]).group(1)
+            )
+
         return expense_details_urls
 
     def _download_expense_details_page(self, expense_details_urls):
@@ -152,20 +157,19 @@ class PortalTransparenciaScrapper:
         for expense_url in expense_details_urls:
             url = self.BASE_URL + expense_url
             response = requests.request("GET", url, verify=False)
-            expense_details.append({
-                'url': expense_url, 
-                'html_content': response.content
-            })
+            expense_details.append(
+                {"url": expense_url, "html_content": response.content}
+            )
         return expense_details
-    
+
     def extract_expenses_details(self, expense_details_pages):
         """
         Extracts detailed expense information from a list of HTML pages.
         Args:
-            expense_details_pages (list of str): A list of HTML page contents as strings, 
+            expense_details_pages (list of str): A list of HTML page contents as strings,
                              each containing details of an expense.
         Returns:
-            list of dict: A list of dictionaries where each dictionary contains detailed 
+            list of dict: A list of dictionaries where each dictionary contains detailed
                   information about an expense. The keys in the dictionary include:
                   - 'numero': The expense number.
                   - 'ano': The expense year.
@@ -174,16 +178,18 @@ class PortalTransparenciaScrapper:
         """
         expense_details = []
         for details_page in expense_details_pages:
-            soup_page = BeautifulSoup(details_page, "html.parser", from_encoding="UTF-8")
+            soup_page = BeautifulSoup(
+                details_page, "html.parser", from_encoding="UTF-8"
+            )
 
             details = {
-                'numero': self._extract_expense_number(soup_page),
-                'ano': self._extract_expense_year(soup_page)
+                "numero": self._extract_expense_number(soup_page),
+                "ano": self._extract_expense_year(soup_page),
             }
             for field_name in DETAILED_EXPENSE_FIELDS:
                 field = soup_page.find("td", string=re.compile(field_name + ":"))
                 field_value = field.text if field else None
-                
+
                 field_name = unicodedata.normalize("NFKD", field_name)
 
                 if field_value:
@@ -192,36 +198,42 @@ class PortalTransparenciaScrapper:
 
                 details[field_name] = field_value
 
-            details['Referencia'] = self._extract_expense_reference(soup_page)
+            details["Referencia"] = self._extract_expense_reference(soup_page)
 
             expense_details.append(details)
 
         return expense_details
 
     def _extract_expense_number(self, soup_page):
-        tds = soup_page.find_all('td')
+        tds = soup_page.find_all("td")
         td_result = None
 
         for td in tds:
             if "Número" in td.get_text():
                 td_result = td
-                break 
+                break
 
         if td_result:
-            bold_content = td_result.find('b').get_text(strip=True) if td_result.find('b') else None
+            bold_content = (
+                td_result.find("b").get_text(strip=True)
+                if td_result.find("b")
+                else None
+            )
             return bold_content
 
     def _extract_expense_year(self, soup_page):
-        year_element = soup_page.find('td', string=re.compile('Exercício'))
+        year_element = soup_page.find("td", string=re.compile("Exercício"))
 
         return year_element.get_text()[-4:]
 
     def _extract_expense_reference(self, soup_page):
         # Extract reference, with exist
-        td = next((t for t in soup_page.find_all('td') if "Referência:" in t.get_text()), None)
+        td = next(
+            (t for t in soup_page.find_all("td") if "Referência:" in t.get_text()), None
+        )
 
         if td:
-            b_tag = td.find('b')
+            b_tag = td.find("b")
             if b_tag:
                 return b_tag.text
         else:
@@ -241,20 +253,24 @@ class PortalTransparenciaScrapper:
         """
         expense_itens = []
         for details_page in expense_details_pages:
-            soup_page = BeautifulSoup(details_page, "html.parser", from_encoding="UTF-8") 
+            soup_page = BeautifulSoup(
+                details_page, "html.parser", from_encoding="UTF-8"
+            )
 
-            item_elements = soup_page.find_all("th", colspan=re.compile("3"), string=re.compile('Item'))
+            item_elements = soup_page.find_all(
+                "th", colspan=re.compile("3"), string=re.compile("Item")
+            )
             for item in item_elements:
                 item_map = {
-                    'item': item.text,
-                    'expense_number': self._extract_expense_number(soup_page),
-                    'expense_year': self._extract_expense_year(soup_page)
+                    "item": item.text,
+                    "expense_number": self._extract_expense_number(soup_page),
+                    "expense_year": self._extract_expense_year(soup_page),
                 }
 
                 for field_name in ITEM_EXPENSE_FIELDS:
                     field = item.find_next("td", string=re.compile(field_name + ":"))
                     field_value = field.text if field else None
-                    
+
                     field_name = unicodedata.normalize("NFKD", field_name)
 
                     if field_value:
@@ -281,22 +297,30 @@ class PortalTransparenciaScrapper:
         """
         expense_invoices = []
         for details_page in expense_details_pages:
-            soup_page = BeautifulSoup(details_page, "html.parser", from_encoding="UTF-8")
+            soup_page = BeautifulSoup(
+                details_page, "html.parser", from_encoding="UTF-8"
+            )
 
-            invoice_element = soup_page.find('td', string=re.compile('Nota Fiscal'))
+            invoice_element = soup_page.find("td", string=re.compile("Nota Fiscal"))
 
             if invoice_element:
                 invoice = {
-                    'codigo': invoice_element.find_next('td', string=re.compile('Código .*')).get_text(),
-                    'tipo': invoice_element.find_next('td', string=re.compile('Tipo .*')).get_text(),
-                    'expense_number': self._extract_expense_number(soup_page),
-                    'expense_year': self._extract_expense_year(soup_page)
+                    "codigo": invoice_element.find_next(
+                        "td", string=re.compile("Código .*")
+                    ).get_text(),
+                    "tipo": invoice_element.find_next(
+                        "td", string=re.compile("Tipo .*")
+                    ).get_text(),
+                    "expense_number": self._extract_expense_number(soup_page),
+                    "expense_year": self._extract_expense_year(soup_page),
                 }
 
                 for field_name in INVOICE_EXPENSE_FIELDS:
-                    field = invoice_element.find_next("td", string=re.compile(field_name + ":"))
+                    field = invoice_element.find_next(
+                        "td", string=re.compile(field_name + ":")
+                    )
                     field_value = field.text if field else None
-                    
+
                     field_name = unicodedata.normalize("NFKD", field_name)
 
                     if field_value:

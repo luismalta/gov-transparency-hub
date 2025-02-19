@@ -60,7 +60,7 @@ ITEM_EXPENSE_FIELDS = [
     "Marca",
     "Quantidade",
     "Valor Unitário",
-    "Total"
+    "Total",
 ]
 
 INVOICE_EXPENSE_FIELDS = [

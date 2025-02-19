@@ -46,6 +46,6 @@ class PostgresResource(ConfigurableResource):
                 dataframe.to_sql(table, engine, if_exists="append", index=False)
         else:
             raise Exception("PostgresResource only supports pandas DataFrames")
-    
+
     def get_conn_str(self):
         return f"postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"

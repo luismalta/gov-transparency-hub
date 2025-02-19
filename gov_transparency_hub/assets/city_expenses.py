@@ -26,7 +26,9 @@ def expense_html_report(context, s3_resource: S3Resource):
 
     partition_date_str = dimensions.get("date")
     year_to_fetch = partition_date_str[:4]
-    day_to_fetch = datetime.strptime(partition_date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+    day_to_fetch = datetime.strptime(partition_date_str, "%Y-%m-%d").strftime(
+        "%d/%m/%Y"
+    )
 
     payload = [
         f"INT_EXR={year_to_fetch}",
@@ -45,10 +47,16 @@ def expense_html_report(context, s3_resource: S3Resource):
 
     s3_resource.upload_html(bucket_name, object_name, report_html)
 
-@asset(deps=["expense_html_report"], partitions_def=daily_city_partition, group_name="expense", kinds=["s3"])
+
+@asset(
+    deps=["expense_html_report"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3"],
+)
 def expense_details_html(context, s3_resource: S3Resource):
     """
-    Download and save expense details html report 
+    Download and save expense details html report
     """
     dimensions = context.partition_key.keys_by_dimension
     city_name = dimensions.get("city")
@@ -62,14 +70,20 @@ def expense_details_html(context, s3_resource: S3Resource):
 
     scrapper = PortalTransparenciaScrapper(city_name)
 
-    expenses =  scrapper.get_expense_details_pages(expense_html_report)
+    expenses = scrapper.get_expense_details_pages(expense_html_report)
 
     for expense in expenses:
-        base64_expense_url = base64.b64encode(expense['url'].encode()).decode()
+        base64_expense_url = base64.b64encode(expense["url"].encode()).decode()
         object_name = f"expense_details_html/{partition_date_str}/{base64_expense_url}"
-        s3_resource.upload_html(bucket_name, object_name, expense['html_content'])
+        s3_resource.upload_html(bucket_name, object_name, expense["html_content"])
 
-@asset(deps=["expense_details_html"], partitions_def=daily_city_partition, group_name="expense", kinds=["s3"])
+
+@asset(
+    deps=["expense_details_html"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3"],
+)
 def extract_expense_details_df(context, s3_resource: S3Resource):
     """
     Extract and save expense details from html in a DataFrame
@@ -80,13 +94,16 @@ def extract_expense_details_df(context, s3_resource: S3Resource):
     bucket_name = city_name
 
     object_name = f"expense_details_html/{partition_date_str}"
-    expenses_details_html = s3_resource.download_folder_contents(bucket_name, object_name)
+    expenses_details_html = s3_resource.download_folder_contents(
+        bucket_name, object_name
+    )
 
     scrapper = PortalTransparenciaScrapper(city_name)
-    extracted_expenses_details =  scrapper.extract_expenses_details(expenses_details_html)
+    extracted_expenses_details = scrapper.extract_expenses_details(
+        expenses_details_html
+    )
 
     expenses_df = pd.DataFrame(extracted_expenses_details)
-
 
     object_name = format_object_name(
         "expense_details_df", bucket_name, partition_date_str
@@ -94,8 +111,15 @@ def extract_expense_details_df(context, s3_resource: S3Resource):
     s3_resource.upload_object(bucket_name, object_name, expenses_df)
 
 
-@asset(deps=["extract_expense_details_df"], partitions_def=daily_city_partition, group_name="expense", kinds=["s3", "dlt", "postgres"])
-def load_raw_expense_details(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+@asset(
+    deps=["extract_expense_details_df"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3", "dlt", "postgres"],
+)
+def load_raw_expense_details(
+    context, s3_resource: S3Resource, postgres_resource: PostgresResource
+):
     """
     Create the raw table in database combining all the expense details DataFrames
     """
@@ -121,14 +145,20 @@ def load_raw_expense_details(context, s3_resource: S3Resource, postgres_resource
         dataset_name="raw",
     )
 
-    load_info = pipeline.run(
+    pipeline.run(
         data=expense_details_df,
         table_name="expense_details",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
         primary_key=["numero", "ano", "municipio"],
     )
 
-@asset(deps=["expense_details_html"], partitions_def=daily_city_partition, group_name="expense",  kinds=["s3"])
+
+@asset(
+    deps=["expense_details_html"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3"],
+)
 def extract_expense_itens_df(context, s3_resource: S3Resource):
     """
     Extract and save expense itens from html in a DataFrame
@@ -139,13 +169,14 @@ def extract_expense_itens_df(context, s3_resource: S3Resource):
     bucket_name = city_name
 
     object_name = f"expense_details_html/{partition_date_str}"
-    expenses_details_html = s3_resource.download_folder_contents(bucket_name, object_name)
+    expenses_details_html = s3_resource.download_folder_contents(
+        bucket_name, object_name
+    )
 
     scrapper = PortalTransparenciaScrapper(city_name)
-    extracted_expenses_itens =  scrapper.extract_expense_itens(expenses_details_html)
+    extracted_expenses_itens = scrapper.extract_expense_itens(expenses_details_html)
 
     itens_df = pd.DataFrame(extracted_expenses_itens)
-
 
     object_name = format_object_name(
         "expense_itens_df", bucket_name, partition_date_str
@@ -153,8 +184,15 @@ def extract_expense_itens_df(context, s3_resource: S3Resource):
     s3_resource.upload_object(bucket_name, object_name, itens_df)
 
 
-@asset(deps=["extract_expense_itens_df"], partitions_def=daily_city_partition, group_name="expense",  kinds=["s3", "dlt", "postgres"])
-def load_raw_expense_itens(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+@asset(
+    deps=["extract_expense_itens_df"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3", "dlt", "postgres"],
+)
+def load_raw_expense_itens(
+    context, s3_resource: S3Resource, postgres_resource: PostgresResource
+):
     """
     Create the raw table in database combining all the expense itens DataFrames
     """
@@ -180,14 +218,20 @@ def load_raw_expense_itens(context, s3_resource: S3Resource, postgres_resource: 
         dataset_name="raw",
     )
 
-    load_info = pipeline.run(
+    pipeline.run(
         expense_itens_df,
         table_name="expense_itens",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
         primary_key=["item", "expense_number", "expense_year", "municipio"],
     )
 
-@asset(deps=["expense_details_html"], partitions_def=daily_city_partition, group_name="expense",  kinds=["s3"])
+
+@asset(
+    deps=["expense_details_html"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3"],
+)
 def extract_expense_invoices_df(context, s3_resource: S3Resource):
     """
     Extract and save expense invoices from html in a DataFrame
@@ -198,13 +242,16 @@ def extract_expense_invoices_df(context, s3_resource: S3Resource):
     bucket_name = city_name
 
     object_name = f"expense_details_html/{partition_date_str}"
-    expenses_details_html = s3_resource.download_folder_contents(bucket_name, object_name)
+    expenses_details_html = s3_resource.download_folder_contents(
+        bucket_name, object_name
+    )
 
     scrapper = PortalTransparenciaScrapper(city_name)
-    extracted_expenses_invoices =  scrapper.extract_expense_invoice(expenses_details_html)
+    extracted_expenses_invoices = scrapper.extract_expense_invoice(
+        expenses_details_html
+    )
 
     invoices_df = pd.DataFrame(extracted_expenses_invoices)
-
 
     object_name = format_object_name(
         "expense_invoices_df", bucket_name, partition_date_str
@@ -212,8 +259,15 @@ def extract_expense_invoices_df(context, s3_resource: S3Resource):
     s3_resource.upload_object(bucket_name, object_name, invoices_df)
 
 
-@asset(deps=["extract_expense_invoices_df"], partitions_def=daily_city_partition, group_name="expense", kinds=["s3", "dlt", "postgres"])
-def load_raw_expense_invoices(context, s3_resource: S3Resource, postgres_resource: PostgresResource):
+@asset(
+    deps=["extract_expense_invoices_df"],
+    partitions_def=daily_city_partition,
+    group_name="expense",
+    kinds=["s3", "dlt", "postgres"],
+)
+def load_raw_expense_invoices(
+    context, s3_resource: S3Resource, postgres_resource: PostgresResource
+):
     """
     Create the raw table in database combining all the expense invoices DataFrames
     """
@@ -239,7 +293,7 @@ def load_raw_expense_invoices(context, s3_resource: S3Resource, postgres_resourc
         dataset_name="raw",
     )
 
-    load_info = pipeline.run(
+    pipeline.run(
         data=expense_invoices_df,
         table_name="expense_invoices",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
@@ -248,11 +302,10 @@ def load_raw_expense_invoices(context, s3_resource: S3Resource, postgres_resourc
 
 
 class CustomDagsterDbtTranslator(DagsterDbtTranslator):
-        def get_group_name(
-            self, dbt_resource_props: Mapping[str, Any]
-        ) -> Optional[str]:
-            return "expense"
-            
+    def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> Optional[str]:
+        return "expense"
+
+
 @dbt_assets(
     manifest=dbt_project.manifest_path,
     dagster_dbt_translator=CustomDagsterDbtTranslator(),

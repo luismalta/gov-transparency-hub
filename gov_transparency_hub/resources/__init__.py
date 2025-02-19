@@ -1,9 +1,7 @@
 from dagster import EnvVar
 from .postgres_resource import PostgresResource
 from .s3_resource import S3Resource
-from . import PortalTransparenciaScrapper
-from . import constants
-from .dbt_connection import dbt_resource, dbt_project
+from .dbt_connection import dbt_resource
 
 
 SHARED_POSTGRES_CONF = {
