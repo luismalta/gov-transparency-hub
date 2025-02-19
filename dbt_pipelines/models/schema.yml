@@ -8,46 +8,122 @@ models:
         data_type: character varying
         data_tests:
           - not_null
+        description: Identificação de uma despesa para um ano específico
       - name: funcao
         data_type: character varying
         data_tests:
           - not_null
+        description: Representa o maior nível de agregação das diversas áreas de despesa que competem ao setor público. A função quase sempre se relaciona com a missão institucional do órgão, por exemplo, cultura, educação, saúde, defesa, dentre outras
       - name: ano
         data_type: character varying
+        description: Ano associado ao registro da despesa
+        data_tests:
+          - not_null
       - name: tipo
         data_type: character varying
+        description: O Tipo de Despesa é uma das informações que compõem a estrutura do Plano de Contas aplicável ao setor público. Essa estrutura é formada por um conjunto de contas contábeis que agrupam as informações financeiras relacionadas às transações realizadas pelo governo. Entre as categorias mais comuns de Tipo de Despesa estão as despesas com pessoal, com materiais e serviços, com investimentos e com juros e encargos da dívida pública.
+        data_tests:
+          - not_null
       - name: data_empenho
         data_type: date
+        description: A data de empenho corresponde ao momento em que o órgão público faz o comprometimento de uma determinada despesa, ou seja, é o registro do valor que será utilizado para pagamento de um serviço ou produto. Essa data é importante porque permite acompanhar a execução dos gastos públicos e verificar se as despesas estão sendo realizadas de acordo com as prioridades estabelecidas pelo governo.
+        data_tests:
+          - not_null
       - name: data_liquidacao
         data_type: date
+        description: A data de liquidação corresponde ao momento em que o órgão público atesta o recebimento do bem ou serviço adquirido, verificando se a entrega ou prestação do serviço foi feita conforme o previsto no contrato ou acordo. Essa verificação é importante para garantir que o dinheiro público está sendo utilizado de forma adequada e que o serviço ou produto adquirido é de qualidade.
       - name: data_pagamento
         data_type: date
+        description: A data de pagamento corresponde ao momento em que o órgão público realiza a efetivação do pagamento da despesa. É importante que essa data seja divulgada para que a sociedade possa acompanhar o cumprimento das obrigações financeiras do governo, bem como verificar se os pagamentos estão sendo realizados dentro do prazo estabelecido em lei.
       - name: unidade
         data_type: character varying
+        description: É a repartição da Administração a quem o orçamento do Município consigna dotações específicas para a realização de seus programas de trabalho.
+        data_tests:
+          - not_null
       - name: subfuncao
         data_type: character varying
+        description: A subfunção representa um nível de agregação imediatamente inferior à função e deve evidenciar cada área da atuação governamental, por intermédio da agregação de determinado subconjunto de despesas e identificação da natureza básica das ações que se aglutinam em torno das funções.
+        data_tests:
+          - not_null
       - name: programa
         data_type: character varying
+        description: Programa é o instrumento de organização da atuação governamental que articula um conjunto de ações que concorrem para a concretização de um objetivo comum preestabelecido, visando à solução de um problema ou ao atendimento de determinada necessidade ou demanda da sociedade.
+        data_tests:
+          - not_null
       - name: atividade
         data_type: character varying
+        description: É um instrumento de programação utilizado para alcançar o objetivo de um programa, envolvendo um conjunto de operações, limitadas no tempo, das quais resulta um produto que concorre para a expansão ou o aperfeiçoamento da ação de Governo.
+        data_tests:
+          - not_null
       - name: categoria_economica
         data_type: character varying
+        description: "A Categoria Econômica é uma classificação, tanto da receita quanto da despesa, que visa propiciar elementos para uma avaliação do efeito econômico das transações do setor público. Quanto à categoria econômica, os §§ 1o e 2o do art. 11 da Lei no 4.320, de 1964, classificam as receitas orçamentárias em Receitas Correntes (código 1) e Receitas de Capital (código 2): 1 - Receitas Correntes: são arrecadadas dentro do exercício, aumentam as disponibilidades financeiras do Estado, em geral com efeito positivo sobre o Patrimônio Líquido, e constituem instrumento para financiar os objetivos definidos nos programas e ações correspondentes às políticas públicas. 2 - Receitas de Capital: aumentam as disponibilidades financeiras do Estado. Porém, de forma diversa das Receitas Correntes, as Receitas de Capital não provocam efeito sobre o Patrimônio Líquido. A despesa, assim como a receita, é classificada em duas categorias econômicas, com os seguintes códigos: 3 - Despesas Correntes: as que não contribuem, diretamente, para a formação ou aquisição de um bem de capital. 4 - Despesas de Capital: as que contribuem, diretamente, para a formação ou aquisição de um bem de capital."
+        data_tests:
+          - not_null
       - name: fonte_recurso
         data_type: character varying
+        description: Identifica as fontes de financiamento dos gastos públicos. As fontes/destinações de recursos reúnem certas Naturezas de Receita conforme regras previamente estabelecidas. Por meio do orçamento público, essas fontes/destinações são associadas a determinadas despesas de forma a evidenciar os meios para atingir os objetivos públicos.
+        data_tests:
+          - not_null
       - name: co_tce
         data_type: character varying
+        description: O CO TCE (Código de Acompanhamento da Execução Orçamentária do Tribunal de Contas do Estado) é um código alfanumérico atribuído pelo Tribunal de Contas do Estado a cada unidade orçamentária e ação governamental executada pelos órgãos públicos estaduais.
+        data_tests:
+          - not_null
       - name: co_aux
         data_type: character varying
+        description: O CO AUX (Código de Acompanhamento da Execução Orçamentária Auxiliar) é um código alfanumérico utilizado pelos contadores para ajudar na gestão da execução orçamentária.
+        data_tests:
+          - not_null
       - name: valor
         data_type: numeric
+        description: Valor da despesa
+        data_tests:
+          - not_null
       - name: beneficiario
         data_type: character varying
+        description: Entidades, pessoas ou empresas com os quais o órgão e/ou autarquia contrai dívidas.
       - name: cpf_cnpj
         data_type: character varying
+        description: CPF ou CNPJ da entidades, pessoas ou empresas com os quais o órgão e/ou autarquia contrai dívidas.
       - name: historico
         data_type: character varying
+        description: Detalhamento da despesa
       - name: municipio
+        description: Município relacionado a receita em questão
         data_type: character varying
+        tests:
+          - accepted_values:
+              values:
+                - alfredovasconcelos
+                - barroso
+                - caranaiba
+                - carandai
+                - carrancas
+                - cbm
+                - coronelxavierchaves
+                - desterrodeentrerios
+                - doresdecampos
+                - ijaci
+                - ingai
+                - itumirim
+                - itutinga
+                - lagoadourada
+                - luminarias
+                - madrededeusdeminas
+                - municipioantoniocarlos
+                - nazareno
+                - piedadedoriogrande
+                - prados
+                - resendecosta
+                - ritapolis
+                - santabarbaradotugurio
+                - santacruzdeminas
+                - santanadogarambeu
+                - saojoaodelrei
+                - saotiago
+                - tiradentes
+          - not_null
 
   - name: expense_itens
     description: Itens das despesas do municípios
@@ -55,29 +131,246 @@ models:
       - name: item
         description: Número do item no detalhamento da despesa
         data_type: character varying
+        data_tests:
+          - not_null
       - name: numero_despesa
-        description: Despesa que o item está associado
+        description: Número da despesa que o item está associado
         data_type: character varying
+        data_tests:
+          - not_null
       - name: ano_despesa
         description: Ano da despesa que o item está associado
         data_type: character varying
+        data_tests:
+          - not_null
       - name: complemento
         data_type: character varying
+        description: Descrição do item adiquirido
       - name: unidade
         data_type: character varying
+        description: Unidade de aquisição
+        data_tests:
+          - not_null
       - name: marca
         data_type: character varying
+        description: Marca do item adquirido
       - name: quantidade
         data_type: numeric
+        description: Quantidade adiquirida
+        data_tests:
+          - not_null
       - name: valor_unitario
         data_type: numeric
+        description: Valo unitário do item
+        data_tests:
+          - not_null
       - name: total
         data_type: numeric
+        description: Valor total dos itens adiquiridos (valor unitário x quantidade).
+        data_tests:
+          - not_null
       - name: municipio
+        description: Município relacionado a receita em questão
         data_type: character varying
+        tests:
+          - accepted_values:
+              values:
+                - alfredovasconcelos
+                - barroso
+                - caranaiba
+                - carandai
+                - carrancas
+                - cbm
+                - coronelxavierchaves
+                - desterrodeentrerios
+                - doresdecampos
+                - ijaci
+                - ingai
+                - itumirim
+                - itutinga
+                - lagoadourada
+                - luminarias
+                - madrededeusdeminas
+                - municipioantoniocarlos
+                - nazareno
+                - piedadedoriogrande
+                - prados
+                - resendecosta
+                - ritapolis
+                - santabarbaradotugurio
+                - santacruzdeminas
+                - santanadogarambeu
+                - saojoaodelrei
+                - saotiago
+                - tiradentes
+          - not_null
 
   - name: expense_invoices
     description: Notas fiscais das despesas do municípios
-  
+    columns:
+      - name: municipio
+        description: Município relacionado a receita em questão
+        data_type: character varying
+        tests:
+          - accepted_values:
+              values:
+                - alfredovasconcelos
+                - barroso
+                - caranaiba
+                - carandai
+                - carrancas
+                - cbm
+                - coronelxavierchaves
+                - desterrodeentrerios
+                - doresdecampos
+                - ijaci
+                - ingai
+                - itumirim
+                - itutinga
+                - lagoadourada
+                - luminarias
+                - madrededeusdeminas
+                - municipioantoniocarlos
+                - nazareno
+                - piedadedoriogrande
+                - prados
+                - resendecosta
+                - ritapolis
+                - santabarbaradotugurio
+                - santacruzdeminas
+                - santanadogarambeu
+                - saojoaodelrei
+                - saotiago
+                - tiradentes
+          - not_null
+      - name: codigo
+        description: Código
+        data_type: character varying
+        tests:
+          - not_null
+      - name: tipo
+        description: Tipo
+        data_type: character varying
+        tests:
+          - not_null
+      - name: numero_despesa
+        description: Número da despesa que a nota fiscal está associado
+        data_type: character varying
+        tests:
+          - not_null
+      - name: ano_despesa
+        description: Ano da despesa que a nota fiscal está associado
+        data_type: character varying
+        tests:
+          - not_null
+      - name: nota_fiscal
+        description: Número da nota fiscal
+        data_type: character varying
+        tests:
+          - not_null
+      - name: serie
+        description: Série da nota fiscal
+        data_type: character varying
+        tests:
+          - not_null
+      - name: data_emissao
+        description: Data da emissão da nota fiscal
+        data_type: date
+        tests:
+          - not_null
+      - name: data_vencimento
+        description: Data de vencimento da nota fiscal
+        data_type: date
+        tests:
+          - not_null
+      - name: chave_acesso
+        description: Chave de acesso da nota fiscal
+        data_type: character varying
+
   - name: revenue_details
     description: Detalhes das receitas do município
+    columns:
+      - name: id
+        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt. Esse ID é o timestamp do momento da ingestão de cada ponto de dado
+        data_type: character varying
+        data_tests:
+          - not_null
+          - unique
+      - name: data
+        description: Data da receita
+        data_type: date
+        data_tests:
+          - not_null
+      - name: tipo_minuta
+        description: Tipo da minuta da receita em questão
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: codigo_receita
+        description: Código relacionado a descrição da receita
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: descricao_receita
+        description: Recursos auferidos na gestão, a serem computados na apuração do resultado do exercício, desdobrados nas categorias econômicas de correntes e de capital.
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: fonte_recurso
+        description: Identifica as fontes de financiamento dos gastos públicos. As fontes/destinações de recursos reúnem certas Naturezas de Receita conforme regras previamente estabelecidas. Por meio do orçamento público, essas fontes/destinações são associadas a determinadas despesas de forma a evidenciar os meios para atingir os objetivos públicos.
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: co_tce
+        description: O CO TCE (Código de Acompanhamento da Execução Orçamentária do Tribunal de Contas do Estado) é um código alfanumérico atribuído pelo Tribunal de Contas do Estado a cada unidade orçamentária e ação governamental executada pelos órgãos públicos estaduais.
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: co_aux
+        description: O CO AUX (Código de Acompanhamento da Execução Orçamentária Auxiliar) é um código alfanumérico utilizado pelos contadores para ajudar na gestão da execução orçamentária.
+        data_type: character varying
+        data_tests:
+          - not_null
+      - name: historico
+        description: Observações da receita em questão
+        data_type: character varying
+      - name: valor
+        description: Valor da receita
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: municipio
+        description: Município relacionado a receita em questão
+        data_type: character varying
+        tests:
+          - accepted_values:
+              values:
+                - alfredovasconcelos
+                - barroso
+                - caranaiba
+                - carandai
+                - carrancas
+                - cbm
+                - coronelxavierchaves
+                - desterrodeentrerios
+                - doresdecampos
+                - ijaci
+                - ingai
+                - itumirim
+                - itutinga
+                - lagoadourada
+                - luminarias
+                - madrededeusdeminas
+                - municipioantoniocarlos
+                - nazareno
+                - piedadedoriogrande
+                - prados
+                - resendecosta
+                - ritapolis
+                - santabarbaradotugurio
+                - santacruzdeminas
+                - santanadogarambeu
+                - saojoaodelrei
+                - saotiago
+                - tiradentes
+          - not_null
