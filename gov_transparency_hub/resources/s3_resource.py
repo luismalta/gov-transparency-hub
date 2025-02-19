@@ -19,9 +19,7 @@ def connect_s3(config):
         )
         yield s3_resource
     finally:
-        bucket = s3_resource.Bucket("my-bucket-name")
-        if not bucket.creation_date:
-            s3_resource.create_bucket(Bucket="my-bucket-name")
+        pass
 
 
 class S3Resource(ConfigurableResource):
@@ -58,6 +56,9 @@ class S3Resource(ConfigurableResource):
 
     def upload_html(self, bucket_name, filename, html):
         with connect_s3(config=self._config) as s3_resource:
+            if not s3_resource.Bucket(bucket_name).creation_date:
+                s3_resource.create_bucket(Bucket=bucket_name)
+                
             s3_resource.Object(bucket_name, filename).put(Body=html)
     
     def download_html(self, bucket_name, filename):
