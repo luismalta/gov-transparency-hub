@@ -1,23 +1,14 @@
-FROM python:3.10-slim
-
-RUN mkdir -p /opt/dagster/dagster_home /opt/dagster/app
-
-RUN pip install dagster-webserver dagster-postgres dagster-aws
-
-# Copy your code and workspace to /opt/dagster/app
-COPY workspace.yaml pyproject.toml README.md /opt/dagster/app/
-COPY gov_transparency_hub /opt/dagster/app/gov_transparency_hub
-
-ENV DAGSTER_HOME=/opt/dagster/dagster_home/
-
-# Copy dagster instance YAML to $DAGSTER_HOME
-COPY dagster.yaml /opt/dagster/dagster_home/
-
-WORKDIR /opt/dagster/app
-
-RUN pip install -e .
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 
-EXPOSE 3000
+COPY gov_transparency_hub /app/gov_transparency_hub
+COPY pyproject.toml /app/pyproject.toml
+COPY uv.lock /app/uv.lock
 
-ENTRYPOINT ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
+
+WORKDIR /app
+RUN uv sync --frozen
+
+EXPOSE 5001
+
+CMD ["uv", "run", "dagster", "code-server", "start", "-h", "0.0.0.0", "-p", "5001", "-m", "gov_transparency_hub"]
