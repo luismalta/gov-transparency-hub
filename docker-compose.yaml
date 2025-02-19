@@ -22,7 +22,7 @@ services:
   postgres:
     image: postgres
     volumes:
-      - ./01-base-schema.sql:/docker-entrypoint-initdb.d/01-base-schema.sql
+      - ./01-setup-local-database.sql:/docker-entrypoint-initdb.d/01-setup-local-database.sql
     environment:
       POSTGRES_PASSWORD: "postgres"
     ports:
