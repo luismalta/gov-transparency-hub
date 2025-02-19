@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 # Points to the dbt project path
-dbt_project_directory = Path(__file__).absolute().parent.parent.parent / "dbt_pipelines"
+dbt_project_directory = Path(__file__).absolute().parent.parent / "dbt_pipelines"
 
 dbt_project = DbtProject(project_dir=dbt_project_directory)
 
