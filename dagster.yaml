@@ -11,3 +11,9 @@ storage:
         env: DAGSTER_PG_DB
       port:
         env: DAGSTER_PG_PORT
+
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 5
