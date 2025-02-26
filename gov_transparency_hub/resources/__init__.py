@@ -1,7 +1,7 @@
 from dagster import EnvVar
 from .postgres_resource import PostgresResource
 from .s3_resource import S3Resource
-from .dbt_connection import dbt_resource
+from .dbt_connection import dbt_resource, dbt_project
 
 
 SHARED_POSTGRES_CONF = {
