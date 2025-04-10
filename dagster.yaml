@@ -17,3 +17,7 @@ run_coordinator:
   class: QueuedRunCoordinator
   config:
     max_concurrent_runs: 5
+
+run_retries:
+  enabled: true
+  max_retries: 3
