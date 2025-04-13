@@ -1,8 +1,14 @@
 -- Active: 1718368045625@@127.0.0.1@5432@gov_transparency_hub
 {{ config(materialized='table') }}
 
+with delete_na_rows as (
+    SELECT *
+    FROM {{ source('dagster', 'expense_invoices') }}
+    WHERE
+        expense_number != 'N/A'
+),
 
-with expense_invoices as (
+expense_invoices as (
 
     SELECT
         "codigo",
@@ -16,7 +22,7 @@ with expense_invoices as (
         "chave_de_acesso" AS "chave_acesso",
         "municipio" AS "municipio"
     FROM
-    {{ source('dagster', 'expense_invoices') }}
+        delete_na_rows
 
 )
 

@@ -182,6 +182,12 @@ class PortalTransparenciaScrapper:
                 details_page, "html.parser", from_encoding="UTF-8"
             )
 
+            if self._expense_is_missing(soup_page):
+                expense_details.append(
+                    self._fill_missing_expense_with_dummy_values(DETAILED_EXPENSE_FIELDS + ["Referencia", "numero", "ano"])
+                )
+                continue
+
             details = {
                 "numero": self._extract_expense_number(soup_page),
                 "ano": self._extract_expense_year(soup_page),
@@ -257,6 +263,12 @@ class PortalTransparenciaScrapper:
                 details_page, "html.parser", from_encoding="UTF-8"
             )
 
+            if self._expense_is_missing(soup_page):
+                expense_itens.append(
+                    self._fill_missing_expense_with_dummy_values(ITEM_EXPENSE_FIELDS + ["item", "expense_number", "expense_year"])
+                )
+                continue
+
             item_elements = soup_page.find_all(
                 "th", colspan=re.compile("3"), string=re.compile("Item")
             )
@@ -301,6 +313,12 @@ class PortalTransparenciaScrapper:
                 details_page, "html.parser", from_encoding="UTF-8"
             )
 
+            if self._expense_is_missing(soup_page):
+                expense_invoices.append(
+                    self._fill_missing_expense_with_dummy_values(INVOICE_EXPENSE_FIELDS + ["codigo", "tipo", "expense_number", "expense_year"])
+                )
+                continue
+
             invoice_element = soup_page.find("td", string=re.compile("Nota Fiscal"))
 
             if invoice_element:
@@ -330,3 +348,17 @@ class PortalTransparenciaScrapper:
                     invoice[field_name] = field_value
                 expense_invoices.append(invoice)
         return expense_invoices
+    
+    def _expense_is_missing(self, soup_page):
+        body_text = soup_page.body.get_text()
+        if "Não foi possível mostrar as informações deste portal" in body_text:
+            return True
+        return False
+
+    def _fill_missing_expense_with_dummy_values(self, fields):
+        record = {}
+        for field in fields:
+            record[field] = "N/A"
+        return record
+
+
