@@ -5,3 +5,4 @@ minio/
 tmp*/
 logs/
 .env
+.minio/
