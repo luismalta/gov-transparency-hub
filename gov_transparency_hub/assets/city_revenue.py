@@ -74,10 +74,13 @@ def extract_revenue_details_df(
     )
     s3_resource.upload_object(bucket_name, object_name, revenue_df)
 
+    revenue_df["Valor"] = revenue_df["Valor"].astype(float)
+    total_value = revenue_df["Valor"].sum()
     return Output(
         revenue_df,
         metadata={
-            "Count": len(revenue_df),
+            "row_count": len(revenue_df),
+            "total_accumulated_month": float(total_value),
             "preview": MetadataValue.md(revenue_df.head().to_markdown()),
         },
     )
@@ -142,6 +145,15 @@ def load_raw_revenue_details(
         primary_key=["surrogate_key"],
     )
 
+    revenue_details_df["Valor"] = revenue_details_df["Valor"].astype(float)
+    total_value = revenue_details_df["Valor"].sum()
+    return Output(
+        revenue_details_df,
+        metadata={
+            "row_count": len(revenue_details_df),
+            "total_accumulated_month": float(total_value),
+            "preview": MetadataValue.md(revenue_details_df.head().to_markdown()),
+        },
     )
 
 

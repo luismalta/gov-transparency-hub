@@ -4,7 +4,7 @@ import dlt
 from typing import Any, Optional
 from collections.abc import Mapping
 from datetime import datetime
-from dagster import asset
+from dagster import Output, asset, MetadataValue
 from dagster_dbt import dbt_assets, DbtCliResource, DagsterDbtTranslator
 
 from gov_transparency_hub.resources import PostgresResource, S3Resource, dbt_project
@@ -110,6 +110,17 @@ def extract_expense_details_df(context, s3_resource: S3Resource):
     )
     s3_resource.upload_object(bucket_name, object_name, expenses_df)
 
+    expenses_df["Valor"] = expenses_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
+    total_value = expenses_df["Valor"].sum()
+    return Output(
+        expenses_df,
+        metadata={
+            "row_count": len(expenses_df),
+            "total_value": float(total_value),
+            "preview": MetadataValue.md(expenses_df.head().to_markdown()),
+        },
+    )
+
 
 @asset(
     deps=["extract_expense_details_df"],
@@ -157,6 +168,16 @@ def load_raw_expense_details(
             write_disposition={"disposition": "merge", "strategy": "upsert"},
             primary_key=["surrogate_key"],
         )
+
+    expense_details_df["Valor"] = expense_details_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
+    total_value = expense_details_df["Valor"].sum()
+    return Output(
+        expense_details_df,
+        metadata={
+            "row_count": len(expense_details_df),
+            "total_value": float(total_value),
+            "preview": MetadataValue.md(expense_details_df.head().to_markdown()),
+        },
     )
 
 
@@ -189,6 +210,14 @@ def extract_expense_itens_df(context, s3_resource: S3Resource):
         "expense_itens_df", bucket_name, partition_date_str
     )
     s3_resource.upload_object(bucket_name, object_name, itens_df)
+
+    return Output(
+        itens_df,
+        metadata={
+            "row_count": len(itens_df),
+            "preview": MetadataValue.md(itens_df.head().to_markdown()),
+        },
+    )
 
 
 @asset(
@@ -236,10 +265,13 @@ def load_raw_expense_itens(
             write_disposition={"disposition": "merge", "strategy": "upsert"},
             primary_key=["surrogate_key"],
         )
+
+    return Output(
         expense_itens_df,
-        table_name="expense_itens",
-        write_disposition={"disposition": "merge", "strategy": "upsert"},
-        primary_key=["item", "expense_number", "expense_year", "municipio"],
+        metadata={
+            "row_count": len(expense_itens_df),
+            "preview": MetadataValue.md(expense_itens_df.head().to_markdown()),
+        },
     )
 
 
@@ -274,6 +306,14 @@ def extract_expense_invoices_df(context, s3_resource: S3Resource):
         "expense_invoices_df", bucket_name, partition_date_str
     )
     s3_resource.upload_object(bucket_name, object_name, invoices_df)
+
+    return Output(
+        invoices_df,
+        metadata={
+            "row_count": len(invoices_df),
+            "preview": MetadataValue.md(invoices_df.head().to_markdown()),
+        },
+    )
 
 
 @asset(
@@ -322,6 +362,12 @@ def load_raw_expense_invoices(
             primary_key=["surrogate_key"],
         )
 
+    return Output(
+        expense_invoices_df,
+        metadata={
+            "row_count": len(expense_invoices_df),
+            "preview": MetadataValue.md(expense_invoices_df.head().to_markdown()),
+        },
     )
 
 
