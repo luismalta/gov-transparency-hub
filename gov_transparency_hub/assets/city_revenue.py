@@ -52,7 +52,7 @@ def revenue_html_report(context, s3_resource: S3Resource):
     group_name="revenue",
     kinds=["s3"],
 )
-def extract_revenue_deatils_df(
+def extract_revenue_details_df(
     context, s3_resource: S3Resource, postgres_resource: PostgresResource
 ):
     """
@@ -84,7 +84,7 @@ def extract_revenue_deatils_df(
 
 
 @asset(
-    deps=["extract_revenue_deatils_df"],
+    deps=["extract_revenue_details_df"],
     partitions_def=daily_city_partition,
     group_name="revenue",
     kinds=["s3", "dlt", "postgres"],
