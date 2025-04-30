@@ -3,6 +3,7 @@ import time
 import json
 import requests
 import unicodedata
+from io import StringIO
 import pandas as pd
 from bs4 import BeautifulSoup
 
@@ -107,12 +108,10 @@ class PortalTransparenciaScrapper:
         Returns:
             list: A list of dictionaries, each containing the extracted revenue details.
         """
-        soup_page = BeautifulSoup(
-            revenue_html_report, "html.parser", from_encoding="UTF-8"
-        )
+        soup_page = BeautifulSoup(revenue_html_report, features="lxml")
 
         table = soup_page.find_all("table")
-        revenue_df = pd.read_html(str(table))[0]
+        revenue_df = pd.read_html(StringIO(str(table)), decimal=",", thousands=".", encoding='UTF-8')[0]
 
         revenue_df.query(
             'not Data.str.contains("TOTAL")', engine="python", inplace=True
@@ -120,8 +119,6 @@ class PortalTransparenciaScrapper:
         revenue_df.query(
             'not Data.str.contains("Total do Dia")', engine="python", inplace=True
         )
-
-        revenue_df["id"] = revenue_df.apply(lambda x: time.time(), axis=1)
 
         return revenue_df
 

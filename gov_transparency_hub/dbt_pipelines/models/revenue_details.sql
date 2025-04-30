@@ -14,7 +14,7 @@ with revenue_details as (
         "co_tce",
         "co_aux",
         "hist_rico" AS "historico",
-        REPLACE(REPLACE("valor", '.', ''), ',', '.')::DECIMAL AS "valor",
+        "valor",
         "municipio"
     FROM
     {{ source('dagster', 'revenue_details') }}
