@@ -11,6 +11,7 @@ with delete_na_rows as (
 expense_itens as (
 
     SELECT
+        "surrogate_key"::varchar,
         "item",
         "expense_number" AS "numero_despesa",
         "expense_year" AS "ano_despesa",

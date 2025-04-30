@@ -12,7 +12,7 @@ from gov_transparency_hub.resources.PortalTransparenciaScrapper import (
     PortalTransparenciaScrapper,
 )
 from gov_transparency_hub.partitions import daily_city_partition
-from gov_transparency_hub.assets.utils import format_object_name
+from gov_transparency_hub.assets.utils import format_object_name, create_surrogate_key
 
 
 @asset(partitions_def=daily_city_partition, group_name="expense", kinds=["s3"])
@@ -134,22 +134,29 @@ def load_raw_expense_details(
 
     expense_details_df = s3_resource.get_object(bucket_name, object_name)
 
-    if expense_details_df.empty:
-        return
+    if not expense_details_df.empty:
 
-    expense_details_df["municipio"] = city_name
+        expense_details_df["municipio"] = city_name
 
-    pipeline = dlt.pipeline(
-        pipeline_name="load_raw_expense_details",
-        destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
-        dataset_name="raw",
-    )
+        expense_details_df["surrogate_key"] = create_surrogate_key(
+            expense_details_df,
+            hash_columns=expense_details_df.columns.tolist(),
+            prefix_columns=["numero", "ano", "municipio"]
+        )
 
-    pipeline.run(
-        data=expense_details_df,
-        table_name="expense_details",
-        write_disposition={"disposition": "merge", "strategy": "upsert"},
-        primary_key=["numero", "ano", "municipio"],
+
+        pipeline = dlt.pipeline(
+            pipeline_name="load_raw_expense_details",
+            destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
+            dataset_name="raw",
+        )
+
+        pipeline.run(
+            data=expense_details_df,
+            table_name="expense_details",
+            write_disposition={"disposition": "merge", "strategy": "upsert"},
+            primary_key=["surrogate_key"],
+        )
     )
 
 
@@ -207,18 +214,28 @@ def load_raw_expense_itens(
 
     expense_itens_df = s3_resource.get_object(bucket_name, object_name)
 
-    if expense_itens_df.empty:
-        return
+    if not expense_itens_df.empty:
 
-    expense_itens_df["municipio"] = city_name
+        expense_itens_df["municipio"] = city_name
 
-    pipeline = dlt.pipeline(
-        pipeline_name="load_raw_expense_itens",
-        destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
-        dataset_name="raw",
-    )
+        expense_itens_df["surrogate_key"] = create_surrogate_key(
+            expense_itens_df,
+            hash_columns=expense_itens_df.columns.tolist(),
+            prefix_columns=["item", "expense_number", "expense_year", "municipio"]
+        )
 
-    pipeline.run(
+        pipeline = dlt.pipeline(
+            pipeline_name="load_raw_expense_itens",
+            destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
+            dataset_name="raw",
+        )
+
+        pipeline.run(
+            expense_itens_df,
+            table_name="expense_itens",
+            write_disposition={"disposition": "merge", "strategy": "upsert"},
+            primary_key=["surrogate_key"],
+        )
         expense_itens_df,
         table_name="expense_itens",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
@@ -282,22 +299,29 @@ def load_raw_expense_invoices(
 
     expense_invoices_df = s3_resource.get_object(bucket_name, object_name)
 
-    if expense_invoices_df.empty:
-        return
+    if not expense_invoices_df.empty:
 
-    expense_invoices_df["municipio"] = city_name
+        expense_invoices_df["municipio"] = city_name
 
-    pipeline = dlt.pipeline(
-        pipeline_name="load_raw_expense_invoices",
-        destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
-        dataset_name="raw",
-    )
+        expense_invoices_df["surrogate_key"] = create_surrogate_key(
+            expense_invoices_df,
+            hash_columns=expense_invoices_df.columns.tolist(),
+            prefix_columns=["municipio"]
+        )
 
-    pipeline.run(
-        data=expense_invoices_df,
-        table_name="expense_invoices",
-        write_disposition={"disposition": "merge", "strategy": "upsert"},
-        primary_key=["nota_fiscal", "municipio"],
+        pipeline = dlt.pipeline(
+            pipeline_name="load_raw_expense_invoices",
+            destination=dlt.destinations.postgres(postgres_resource.get_conn_str()),
+            dataset_name="raw",
+        )
+
+        pipeline.run(
+            data=expense_invoices_df,
+            table_name="expense_invoices",
+            write_disposition={"disposition": "merge", "strategy": "upsert"},
+            primary_key=["surrogate_key"],
+        )
+
     )
 
 

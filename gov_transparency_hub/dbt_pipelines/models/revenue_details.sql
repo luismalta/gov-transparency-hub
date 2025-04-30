@@ -5,7 +5,7 @@
 with revenue_details as (
 
     SELECT
-        "id"::varchar,
+        "surrogate_key"::varchar,
         TO_DATE("data", 'DD/MM/YYY') AS "data",
         "tipo_de_minuta" AS "tipo_minuta",
         "receita" AS "codigo_receita",

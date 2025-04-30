@@ -4,6 +4,12 @@ models:
   - name: expense_datails
     description: Detalhes das despesas do municípios
     columns:
+      - name: surrogate_key
+        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt.
+        data_type: character varying
+        data_tests:
+          - not_null
+          - unique
       - name: numero
         data_type: character varying
         data_tests:
@@ -128,6 +134,12 @@ models:
   - name: expense_itens
     description: Itens das despesas do municípios
     columns:
+      - name: surrogate_key
+        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt.
+        data_type: character varying
+        data_tests:
+          - not_null
+          - unique
       - name: item
         description: Número do item no detalhamento da despesa
         data_type: character varying
@@ -208,6 +220,12 @@ models:
   - name: expense_invoices
     description: Notas fiscais das despesas do municípios
     columns:
+      - name: surrogate_key
+        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt.
+        data_type: character varying
+        data_tests:
+          - not_null
+          - unique
       - name: municipio
         description: Município relacionado a receita em questão
         data_type: character varying
@@ -290,8 +308,8 @@ models:
   - name: revenue_details
     description: Detalhes das receitas do município
     columns:
-      - name: id
-        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt. Esse ID é o timestamp do momento da ingestão de cada ponto de dado
+      - name: surrogate_key
+        description: ID autogerado durante a ingestão para permitir a carga de dados pelo dlt.
         data_type: character varying
         data_tests:
           - not_null

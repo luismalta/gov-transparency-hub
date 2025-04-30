@@ -11,6 +11,7 @@ with delete_na_rows as (
 expense_invoices as (
 
     SELECT
+        "surrogate_key"::varchar,
         "codigo",
         "tipo",
         "expense_number" AS "numero_despesa",

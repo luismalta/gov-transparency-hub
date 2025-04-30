@@ -9,7 +9,7 @@ from gov_transparency_hub.resources.PortalTransparenciaScrapper import (
     PortalTransparenciaScrapper,
 )
 from gov_transparency_hub.partitions import daily_city_partition
-from gov_transparency_hub.assets.utils import format_object_name
+from gov_transparency_hub.assets.utils import format_object_name, create_surrogate_key
 
 DELETE_REVENUE_FROM_CURRENT_MONTH = """
     DELETE FROM raw.revenue_details
@@ -114,6 +114,12 @@ def load_raw_revenue_details(
     year_to_fetch = partition_date_str[:4]
     month_to_fetch = partition_date_str[5:7]
 
+    revenue_details_df["surrogate_key"] = create_surrogate_key(
+        revenue_details_df,
+        hash_columns=revenue_details_df.columns.tolist(),
+        prefix_columns=["municipio"]
+    )
+
     try:
         postgres_resource.execute_query(
             DELETE_REVENUE_FROM_CURRENT_MONTH.format(
@@ -133,7 +139,9 @@ def load_raw_revenue_details(
         data=revenue_details_df,
         table_name="revenue_details",
         write_disposition={"disposition": "merge", "strategy": "upsert"},
-        primary_key=["id", "municipio"],
+        primary_key=["surrogate_key"],
+    )
+
     )
 
 
