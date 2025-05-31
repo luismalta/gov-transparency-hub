@@ -1,31 +1,46 @@
--- Active: 1718368045625@@127.0.0.1@5432@gov_transparency_hub
 {{ config(materialized='table') }}
 
-with delete_na_rows as (
-    SELECT *
-    FROM {{ source('dagster', 'expense_itens') }}
-    WHERE
-        expense_number != 'N/A'
+with raw_data as (
+    select *
+    from {{ source('dagster', 'expense_itens') }}
+    where expense_number != 'N/A'
 ),
 
-expense_itens as (
-
-    SELECT
-        "surrogate_key"::varchar,
+cleaned_data as (
+    select
+        "surrogate_key"::varchar as surrogate_key,
         "item",
-        "expense_number" AS "numero_despesa",
-        "expense_year" AS "ano_despesa",
-        "complemento" AS "complemento",
-        "unidade" AS "unidade",
-        "marca" AS "marca",
-        REPLACE(REPLACE("quantidade", '.', ''), ',', '.')::DECIMAL AS "quantidade",
-        REPLACE(REPLACE("valor_unita_rio", '.', ''), ',', '.')::DECIMAL AS "valor_unitario",
-        REPLACE(REPLACE("total", '.', ''), ',', '.')::DECIMAL AS "total",
-        "municipio" AS "municipio"
-    FROM
-    {{ source('dagster', 'expense_itens') }}
+        "expense_number" as numero_despesa,
+        "expense_year" as ano_despesa,
+        "complemento",
+        "unidade",
+        "marca",
+        case 
+            when REPLACE(REPLACE("quantidade", '.', ''), ',', '.') ~ '^[0-9]+(\.[0-9]+)?$'
+            then REPLACE(REPLACE("quantidade", '.', ''), ',', '.')::DECIMAL
+            else null
+        end as quantidade,
+        case 
+            when REPLACE(REPLACE("valor_unita_rio", '.', ''), ',', '.') ~ '^[0-9]+(\.[0-9]+)?$'
+            then REPLACE(REPLACE("valor_unita_rio", '.', ''), ',', '.')::DECIMAL
+            else null
+        end as valor_unitario,
+        case 
+            when REPLACE(REPLACE("total", '.', ''), ',', '.') ~ '^[0-9]+(\.[0-9]+)?$'
+            then REPLACE(REPLACE("total", '.', ''), ',', '.')::DECIMAL
+            else null
+        end as total,
+        "municipio"
+    from raw_data
+),
 
+valid_records as (
+    select *
+    from cleaned_data
+    where quantidade is not null
+      and valor_unitario is not null
+      and total is not null
 )
 
 select *
-from expense_itens
+from valid_records
