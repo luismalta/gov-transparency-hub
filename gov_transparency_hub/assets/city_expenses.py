@@ -110,8 +110,11 @@ def extract_expense_details_df(context, s3_resource: S3Resource):
     )
     s3_resource.upload_object(bucket_name, object_name, expenses_df)
 
-    expenses_df["Valor"] = expenses_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
-    total_value = expenses_df["Valor"].sum()
+    total_value = 0.0
+    if not expenses_df.empty:
+        expenses_df["Valor"] = expenses_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
+        total_value = expenses_df["Valor"].sum()
+
     return Output(
         expenses_df,
         metadata={
@@ -169,8 +172,11 @@ def load_raw_expense_details(
             primary_key=["surrogate_key"],
         )
 
-    expense_details_df["Valor"] = expense_details_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
-    total_value = expense_details_df["Valor"].sum()
+    total_value = 0.0
+    if not expense_details_df.empty:
+        expense_details_df["Valor"] = expense_details_df["Valor"].str.replace(".", "").str.replace(",", ".").astype(float)
+        total_value = expense_details_df["Valor"].sum()
+
     return Output(
         expense_details_df,
         metadata={
