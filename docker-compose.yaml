@@ -1,15 +1,17 @@
 services:
   postgres:
     image: postgres
+    shm_size: 128mb
     volumes:
       - ./01-setup-local-database.sql:/docker-entrypoint-initdb.d/01-setup-local-database.sql
+      - ./postgres-data:/var/lib/postgresql/18/docker
     environment:
       POSTGRES_PASSWORD: "postgres"
     ports:
-      - "5432:5432"
+      - "5433:5432"
   
   minio:
-    image: quay.io/minio/minio
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     volumes:
       - ./.minio/data:/data
     ports:
