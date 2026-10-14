@@ -1,3 +1,4 @@
+from gov_transparency_hub.assets.df_reports import DF_REPORT_ENDPOINTS
 from gov_transparency_hub.assets.raw_load_assets import (
     RawTableConfig,
     build_raw_load_assets,
@@ -33,4 +34,6 @@ RAW_REPORT_CONFIGS = [
     ),
 ]
 
-raw_report_assets = build_raw_load_assets("raw_reports", RAW_REPORT_CONFIGS)
+raw_report_assets = build_raw_load_assets(
+    "raw_reports", RAW_REPORT_CONFIGS, DF_REPORT_ENDPOINTS
+)

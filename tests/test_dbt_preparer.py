@@ -100,3 +100,17 @@ def test_missing_lock_triggers_deps(project):
     preparer.prepare(project)
 
     assert preparer.calls[0] == "deps"
+
+
+def test_deleted_model_triggers_parse(project):
+    # Deleting (or moving) a file leaves no newer file behind, only a newer
+    # directory; the manifest must still be rebuilt to drop the model.
+    _touch(project.project_dir / "target" / "manifest.json", age_seconds=50)
+    _touch(project.project_dir / "models" / "b.sql", age_seconds=100)
+    os.utime(project.project_dir / "models", (time.time() - 100, time.time() - 100))
+    (project.project_dir / "models" / "b.sql").unlink()
+    preparer = RecordingPreparer()
+
+    preparer.prepare(project)
+
+    assert preparer.calls == ["parse"]

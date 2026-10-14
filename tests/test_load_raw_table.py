@@ -143,3 +143,28 @@ def test_float_after_int_partition_is_not_truncated(duckdb_path, tmp_path):
     )
 
     assert result["valor"].tolist() == ["1.5"]
+
+
+def test_switching_upsert_table_to_delete_insert_keeps_repeated_ids(
+    duckdb_path, tmp_path
+):
+    # Production runs use a fresh pipelines_dir, so dlt restores the stored
+    # schema (with the old primary_key) from the destination.
+    upsert = RawTableConfig("fontes", ("municipio", "unidade_gestora", "id"))
+    delete_insert = RawTableConfig(
+        "fontes", ("municipio", "unidade_gestora"), strategy="delete-insert"
+    )
+    rows = {"id": ["1", "1"], "nome": ["A", "À"], "unidade_gestora": ["3", "3"]}
+    destination = dlt.destinations.duckdb(duckdb_path)
+    load_raw_table(
+        prepare_raw_dataframe(pd.DataFrame(rows).head(1), upsert, "ijaci", "2026"),
+        upsert, destination, str(tmp_path / "run1"),
+    )
+    load_raw_table(
+        prepare_raw_dataframe(pd.DataFrame(rows), delete_insert, "ijaci", "2026"),
+        delete_insert, destination, str(tmp_path / "run2"),
+    )
+
+    result = _query(duckdb_path, "select nome from raw.fontes order by nome")
+
+    assert result["nome"].tolist() == ["A", "À"]

@@ -15,11 +15,12 @@ from databricks.sdk.errors import NotFound
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 
 from gov_transparency_hub.assets.portal_api_assets import (
+    PortalEndpoint,
     df_asset_name,
     serialize_nested_columns,
     volume_object_path,
 )
-from gov_transparency_hub.partitions import daily_city_partition
+from gov_transparency_hub.partitions import partition_scope, partitions_def_for
 from gov_transparency_hub.resources import DatabricksVolumeResource
 from gov_transparency_hub.resources.databricks_dlt_resource import (
     DatabricksDltResource,
@@ -116,7 +117,7 @@ def prepare_raw_dataframe(
     df: pd.DataFrame,
     config: RawTableConfig,
     city_name: str,
-    partition_year: str,
+    partition_year: str | None,
 ) -> pd.DataFrame:
     if config.flatten_column:
         df = _flatten_json_column(
@@ -130,7 +131,9 @@ def prepare_raw_dataframe(
     # partition whose values all look like ints would truncate later floats
     # and turn ids like "01" into 1. Typing is dbt's job.
     df = df.astype("string")
-    df = df.assign(municipio=city_name, ano_referencia=partition_year)
+    # Time-less cadastros have no reference year: keep a typed null column.
+    ano_referencia = pd.Series(partition_year, index=df.index, dtype="string")
+    df = df.assign(municipio=city_name, ano_referencia=ano_referencia)
     _validate_keys(df, config)
     return df
 
@@ -173,10 +176,15 @@ def load_raw_table(
     key_columns = list(config.key_columns)
     # delete-insert must not get a primary_key: dlt would deduplicate the batch
     # and drop legitimate identical rows (e.g. two equal receita collections).
+    # A table that was once upsert keeps primary_key in the schema dlt restores
+    # from the destination; it must be cleared explicitly, not just omitted.
     key_hint = (
         {"primary_key": key_columns}
         if config.strategy == "upsert"
-        else {"merge_key": key_columns}
+        else {
+            "merge_key": key_columns,
+            "columns": {c: {"primary_key": False} for c in df.columns},
+        }
     )
     resource = dlt.resource(
         df,
@@ -198,26 +206,28 @@ def _download_source(
     databricks_volume_resource: DatabricksVolumeResource,
     endpoint: str,
     city_name: str,
-    partition_date_str: str,
+    period: str | None,
 ) -> pd.DataFrame:
-    path = volume_object_path(endpoint, city_name, partition_date_str)
+    path = volume_object_path(endpoint, city_name, period)
     try:
         return databricks_volume_resource.download_dataframe(path)
     except NotFound as exc:
         raise FileNotFoundError(
             f"{endpoint} not found at {path}. Materialize "
             f"{df_asset_name(endpoint)} for partition "
-            f"{partition_date_str}|{city_name} first."
+            f"{'|'.join(filter(None, [city_name, period]))} first."
         ) from exc
 
 
-def _build_raw_load_asset(group_name: str, config: RawTableConfig):
+def _build_raw_load_asset(
+    group_name: str, config: RawTableConfig, partitions_def
+):
     asset_name = f"raw_{config.endpoint}"
 
     @asset(
         name=asset_name,
         deps=[df_asset_name(config.endpoint)],
-        partitions_def=daily_city_partition,
+        partitions_def=partitions_def,
         group_name=group_name,
         kinds=["databricks", "dlt"],
         # One MERGE at a time per Delta table; concurrent MERGEs conflict.
@@ -239,25 +249,21 @@ def _build_raw_load_asset(group_name: str, config: RawTableConfig):
         # Any invalid partition (missing parquet, bad key) fails the batch.
         prepared = []
         for key in context.partition_keys:
-            dimensions = daily_city_partition.get_partition_key_from_str(
-                key
-            ).keys_by_dimension
-            city_name = dimensions["city"]
-            partition_date_str = dimensions["date"]
+            city_name, period = partition_scope(partitions_def, key)
             source_df = _download_source(
                 databricks_volume_resource,
                 config.endpoint,
                 city_name,
-                partition_date_str,
+                period,
             )
             if source_df.empty:
                 # Never run delete-insert with an empty frame: keep the slice.
                 continue
             prepared.append(
                 (
-                    partition_date_str,
+                    period or "",
                     prepare_raw_dataframe(
-                        source_df, config, city_name, partition_date_str[:4]
+                        source_df, config, city_name, period and period[:4]
                     ),
                 )
             )
@@ -290,6 +296,18 @@ def _build_raw_load_asset(group_name: str, config: RawTableConfig):
 
 
 def build_raw_load_assets(
-    group_name: str, configs: list[RawTableConfig]
+    group_name: str,
+    configs: list[RawTableConfig],
+    endpoints: list[PortalEndpoint],
 ) -> list[AssetsDefinition]:
-    return [_build_raw_load_asset(group_name, config) for config in configs]
+    # raw_<x> must share df_<x>'s partitions, derived from the endpoint params.
+    partitions_by_endpoint = {
+        endpoint.endpoint: partitions_def_for(endpoint.param_names)
+        for endpoint in endpoints
+    }
+    return [
+        _build_raw_load_asset(
+            group_name, config, partitions_by_endpoint[config.endpoint]
+        )
+        for config in configs
+    ]

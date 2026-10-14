@@ -3,7 +3,7 @@ CITY_LIST = [
     "tiradentes",
     "saojoaodelrei",
     "saotiago",
-    "piedadedoriogrande",
+    # "piedadedoriogrande",  # Disabled: TLS cert expired (2026-10)
     "cbm",
     "itutinga",
     "carrancas",
@@ -18,7 +18,7 @@ CITY_LIST = [
     "coronelxavierchaves",
     "itumirim",
     "ingai",
-    "santabarbaradotugurio",
+    # "santabarbaradotugurio",  # Disabled: Cloudflare bot challenge (403)
     # 'ressaquinha',  # Blacklisted
     # 'ibertioga',  # Blacklisted
     "desterrodeentrerios",

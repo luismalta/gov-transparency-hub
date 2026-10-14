@@ -2,11 +2,17 @@ import json
 from typing import NamedTuple
 
 import pandas as pd
-from dagster import MetadataValue, Output, asset
+from dagster import (
+    AssetDep,
+    MetadataValue,
+    MultiToSingleDimensionPartitionMapping,
+    Output,
+    asset,
+)
 from databricks.sdk.errors import NotFound
 
 from gov_transparency_hub.assets.utils import format_object_name
-from gov_transparency_hub.partitions import daily_city_partition
+from gov_transparency_hub.partitions import partition_scope, partitions_def_for
 from gov_transparency_hub.resources import DatabricksVolumeResource
 from gov_transparency_hub.resources.constants import URLS
 from gov_transparency_hub.resources.portal_transparencia_api import TIMEOUT, fetch
@@ -21,14 +27,15 @@ class PortalEndpoint(NamedTuple):
     timeout: int = TIMEOUT
 
 
-def _partition_params(param_names: tuple[str, ...], partition_date_str: str) -> dict:
-    year, month = partition_date_str[:4], partition_date_str[5:7]
+def _partition_params(param_names: tuple[str, ...], period: str | None) -> dict:
+    if period is None:
+        return {}
     values = {
-        "exercicio": year,
-        "data_do_empenho_inicial": partition_date_str,
-        "data_do_empenho_final": partition_date_str,
-        "exercicio_de_criacao": year,
-        "mes_de_criacao": month,
+        "exercicio": period[:4],
+        "data_do_empenho_inicial": period,
+        "data_do_empenho_final": period,
+        "exercicio_de_criacao": period[:4],
+        "mes_de_criacao": period[5:7],
     }
     return {name: values[name] for name in param_names if name != "unidade_gestora"}
 
@@ -58,18 +65,20 @@ def df_asset_name(endpoint: str) -> str:
     return f"df_{endpoint}"
 
 
-def volume_object_path(resource_name: str, city_name: str, partition_date_str: str):
-    return f"{format_object_name(resource_name, city_name, partition_date_str)}.parquet"
+def volume_object_path(resource_name: str, city_name: str, period: str | None):
+    if period is None:
+        return f"{city_name}/{resource_name}/{city_name}-{resource_name}.parquet"
+    return f"{format_object_name(resource_name, city_name, period)}.parquet"
 
 
 def _save_to_databricks(
     data_df: pd.DataFrame,
     resource_name: str,
     city_name: str,
-    partition_date_str: str,
+    period: str | None,
     databricks_volume_resource: DatabricksVolumeResource,
 ):
-    resource_path = volume_object_path(resource_name, city_name, partition_date_str)
+    resource_path = volume_object_path(resource_name, city_name, period)
     return databricks_volume_resource.upload_dataframe(
         data_df, resource_path, overwrite=True
     )
@@ -77,12 +86,10 @@ def _save_to_databricks(
 
 def _get_unidades_gestoras_ids(
     city_name: str,
-    partition_date_str: str,
     databricks_volume_resource: DatabricksVolumeResource,
 ) -> list[str]:
-    resource_path = volume_object_path(
-        "unidades_gestoras", city_name, partition_date_str
-    )
+    # unidades_gestoras has no time dimension: one parquet per city.
+    resource_path = volume_object_path("unidades_gestoras", city_name, None)
     try:
         unidades_gestoras_df = databricks_volume_resource.download_dataframe(
             resource_path
@@ -90,7 +97,7 @@ def _get_unidades_gestoras_ids(
     except NotFound as exc:
         raise FileNotFoundError(
             f"unidades_gestoras not found at {resource_path}. Materialize "
-            f"unidades_gestoras for partition {partition_date_str}|{city_name} first."
+            f"{df_asset_name('unidades_gestoras')} for partition {city_name} first."
         ) from exc
     return unidades_gestoras_df["id"].tolist()
 
@@ -100,12 +107,9 @@ def _fetch_per_unidade_gestora(
     config: PortalEndpoint,
     city_name: str,
     params: dict,
-    partition_date_str: str,
     databricks_volume_resource: DatabricksVolumeResource,
 ):
-    ug_ids = _get_unidades_gestoras_ids(
-        city_name, partition_date_str, databricks_volume_resource
-    )
+    ug_ids = _get_unidades_gestoras_ids(city_name, databricks_volume_resource)
     if not ug_ids:
         raise ValueError(f"No unidades gestoras found for {city_name}")
 
@@ -127,21 +131,27 @@ def _fetch_per_unidade_gestora(
 
 def _build_portal_api_asset(api: str, group_name: str, config: PortalEndpoint):
     per_unidade_gestora = "unidade_gestora" in config.param_names
+    partitions_def = partitions_def_for(config.param_names)
+    # Every period of a city reads that city's (time-less) UG list.
+    ug_dep = AssetDep(
+        df_asset_name("unidades_gestoras"),
+        partition_mapping=MultiToSingleDimensionPartitionMapping(
+            partition_dimension_name="city"
+        ),
+    )
 
     @asset(
         name=df_asset_name(config.endpoint),
-        deps=[df_asset_name("unidades_gestoras")] if per_unidade_gestora else None,
-        partitions_def=daily_city_partition,
+        deps=[ug_dep] if per_unidade_gestora else None,
+        partitions_def=partitions_def,
         group_name=group_name,
         kinds=["databricks"],
     )
     def _portal_api_asset(
         context, databricks_volume_resource: DatabricksVolumeResource
     ):
-        dimensions = context.partition_key.keys_by_dimension
-        city_name = dimensions.get("city")
-        partition_date_str = dimensions.get("date")
-        params = _partition_params(config.param_names, partition_date_str)
+        city_name, period = partition_scope(partitions_def, context.partition_key)
+        params = _partition_params(config.param_names, period)
 
         if per_unidade_gestora:
             data_df, url = _fetch_per_unidade_gestora(
@@ -149,7 +159,6 @@ def _build_portal_api_asset(api: str, group_name: str, config: PortalEndpoint):
                 config,
                 city_name,
                 params,
-                partition_date_str,
                 databricks_volume_resource,
             )
         else:
@@ -164,7 +173,7 @@ def _build_portal_api_asset(api: str, group_name: str, config: PortalEndpoint):
             data_df,
             config.endpoint,
             city_name,
-            partition_date_str,
+            period,
             databricks_volume_resource,
         )
 

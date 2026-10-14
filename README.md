@@ -23,6 +23,29 @@ To set up the project, ensure you have `uv` and Docker installed.
     uv run dagster dev
     ```
 
+## Backfills
+
+Portal assets are partitioned by each endpoint's natural granularity:
+
+| Partition | Key | Endpoints |
+|---|---|---|
+| day × city | `tiradentes|2025-01-02` | despesa |
+| month × city | `tiradentes|2025-01` | licitacoes |
+| year × city | `tiradentes|2025` | receita, livro de lançamentos, orçamentos, co_tce, per-UG cadastros |
+| city | `tiradentes` | unidades gestoras and other time-less cadastros |
+
+Run backfills in **two phases**, so each `raw_*` table is loaded with a single
+MERGE for the whole range (its single-run backfill policy only batches
+partitions whose `df_*` already exist):
+
+1. Backfill the `df_reports` and `df_resources` groups for the range. Per-UG
+   assets need `df_unidades_gestoras` for the city first.
+2. When it finishes, backfill `raw_reports`, `raw_resources`, `dbt_staging`
+   and `curated`.
+
+Mixing both phases in one backfill works, but the daemon then launches a
+small raw run every time a city's `df_*` lands.
+
 ## Technologies Used for ETL
 
 The project leverages the following technologies to implement the ETL (Extract, Transform, Load) process:

@@ -38,8 +38,11 @@ def _manifest_out_of_date(project: DbtProject) -> bool:
         for name in ("dbt_project.yml", "profiles.yml", "packages.yml", "package-lock.yml")
     ]
     for subdir in _PROJECT_SUBDIRS:
+        root = project_dir / subdir
+        # Directories too: deleting or moving a file only bumps its parent.
+        sources.extend([root, *(d for d in root.rglob("*") if d.is_dir())])
         for pattern in _PROJECT_FILE_PATTERNS:
-            sources.extend((project_dir / subdir).rglob(pattern))
+            sources.extend(root.rglob(pattern))
     return max(map(_mtime, sources), default=0.0) > _mtime(manifest)
 
 

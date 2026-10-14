@@ -1,3 +1,4 @@
+from gov_transparency_hub.assets.df_resources import DF_RESOURCE_ENDPOINTS
 from gov_transparency_hub.assets.raw_load_assets import (
     RawTableConfig,
     build_raw_load_assets,
@@ -15,8 +16,13 @@ RAW_RESOURCE_CONFIGS = [
     RawTableConfig("co_tce", ("municipio", "ano_referencia", "id")),
     RawTableConfig("unidades_orcamentarias", (*UG_YEAR_KEY, "id")),
     # The API repeats some rows verbatim; they carry no extra information.
+    # Some portals also give one id several names (ijaci, luminarias): raw
+    # keeps them all and dbt's conformed dimension picks one.
     RawTableConfig(
-        "fontes_de_recursos", (*UG_YEAR_KEY, "id"), drop_exact_duplicates=True
+        "fontes_de_recursos",
+        UG_YEAR_KEY,
+        strategy="delete-insert",
+        drop_exact_duplicates=True,
     ),
     RawTableConfig("receitas", (*UG_YEAR_KEY, "codigo_da_receita")),
     RawTableConfig("co_aux", (*UG_YEAR_KEY, "id")),
@@ -30,5 +36,5 @@ RAW_RESOURCE_CONFIGS = [
 ]
 
 raw_resource_assets = build_raw_load_assets(
-    "raw_resources", RAW_RESOURCE_CONFIGS
+    "raw_resources", RAW_RESOURCE_CONFIGS, DF_RESOURCE_ENDPOINTS
 )

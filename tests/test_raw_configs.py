@@ -1,8 +1,10 @@
+import pandas as pd
 from dagster import AssetKey
 
 from gov_transparency_hub import defs
 from gov_transparency_hub.assets.df_reports import DF_REPORT_ENDPOINTS
 from gov_transparency_hub.assets.df_resources import DF_RESOURCE_ENDPOINTS
+from gov_transparency_hub.assets.raw_load_assets import prepare_raw_dataframe
 from gov_transparency_hub.assets.raw_reports import RAW_REPORT_CONFIGS
 from gov_transparency_hub.assets.raw_resources import RAW_RESOURCE_CONFIGS
 
@@ -24,8 +26,26 @@ def test_tables_without_natural_key_use_delete_insert():
 
     assert configs["receita"].strategy == "delete-insert"
     assert configs["tipos_de_despesas"].strategy == "delete-insert"
+    assert configs["fontes_de_recursos"].strategy == "delete-insert"
     upserts = [c for c in configs.values() if c.strategy == "upsert"]
-    assert len(upserts) == 20
+    assert len(upserts) == 19
+
+
+def test_fontes_keeps_every_name_the_portal_gives_an_id():
+    # ijaci/luminarias return the same (ug, id) with different names; the
+    # choice of name belongs to dbt's conformed dimension, not to raw.
+    configs = {c.endpoint: c for c in RAW_RESOURCE_CONFIGS}
+    df = pd.DataFrame(
+        {
+            "id": ["1599000", "1599000", "1599000"],
+            "nome": ["VINCULADOS A EDUCAÇÃO", "VINCULADOS À EDUCAÇÃO", "VINCULADOS À EDUCAÇÃO"],
+            "unidade_gestora": ["3", "3", "3"],
+        }
+    )
+
+    result = prepare_raw_dataframe(df, configs["fontes_de_recursos"], "ijaci", "2026")
+
+    assert sorted(result["nome"]) == ["VINCULADOS A EDUCAÇÃO", "VINCULADOS À EDUCAÇÃO"]
 
 
 def test_raw_assets_are_registered_in_definitions():
