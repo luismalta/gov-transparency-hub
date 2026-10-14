@@ -1,13 +1,13 @@
 import os
 from dagster import Definitions, load_assets_from_modules
-from .assets import city_revenue, city_expenses, metrics_report
+from .assets import city_revenue, city_expenses, metrics_report, df_resources, df_reports, raw_reports, raw_resources
 from .jobs import revenue_update_job, expense_update_job
 from .resources import RESOURCES_LOCAL, RESOURCES_STAGING, RESOURCES_PROD
 from .schedules import revenue_update_schedule, expense_update_schedule
 from .sensors import discord_on_run_failure
 from .asset_checks import all_asset_checks
 
-city_revenue_assets = load_assets_from_modules([city_revenue, city_expenses, metrics_report])
+city_revenue_assets = load_assets_from_modules([city_revenue, city_expenses, metrics_report, df_resources, df_reports, raw_reports, raw_resources])
 
 all_assets = [*city_revenue_assets]
 all_jobs = [revenue_update_job, expense_update_job]

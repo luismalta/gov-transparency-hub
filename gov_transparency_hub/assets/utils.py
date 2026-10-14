@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def format_object_name(asset_group, city_name, date):
-    return f"{asset_group}/{city_name}-{asset_group}-{date}"
+    return f"{city_name}/{asset_group}/{city_name}-{asset_group}-{date}"
 
 def create_surrogate_key(
     df: pd.DataFrame,

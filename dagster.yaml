@@ -15,8 +15,13 @@ storage:
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
-  config:
+
+concurrency:
+  runs:
     max_concurrent_runs: 15
+  pools:
+    # raw_<table> pools: one MERGE at a time per Delta table.
+    default_limit: 1
 
 run_retries:
   enabled: true

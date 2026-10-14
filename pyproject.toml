@@ -13,16 +13,18 @@ dependencies = [
     "dagster-dbt>=0.25.11",
     "dagster-dlt>=0.25.11",
     "dagster-postgres>=0.25.11",
+    "databricks-sdk>=0.150.0",
     "dbt-core>=1.9.2",
     "dbt-postgres>=1.9.0",
-    "dlt[postgres]>=1.6.1",
+    "dlt[databricks,postgres]>=1.31.0",
     "fastparquet>=2024.11.0",
     "lxml>=5.3.1",
     "pandas>=2.2.3",
+    "psycopg>=3.3.6",
     "psycopg2-binary>=2.9.10",
     "pyarrow>=19.0.0",
     "requests>=2.32.3",
-    "sqlalchemy>=2.0.37",
+    "sqlalchemy>=2.0.37,<2.1",
 ]
 
 [tool.dagster]
@@ -47,6 +49,12 @@ exclude = '''
 
 [dependency-groups]
 dev = [
+    "dlt[duckdb]>=1.31.0",
     "pre-commit>=4.1.0",
+    "pytest>=9.1.1",
     "ruff>=0.9.6",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
