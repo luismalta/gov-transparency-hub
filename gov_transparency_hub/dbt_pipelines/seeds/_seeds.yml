@@ -1,0 +1,12 @@
+version: 2
+
+seeds:
+  - name: municipios
+    description: Display name for each portal city slug (CITY_LIST).
+    config:
+      column_types: {municipio: string, nome: string}
+    columns:
+      - name: municipio
+        data_tests: [unique, not_null]
+      - name: nome
+        data_tests: [not_null]
