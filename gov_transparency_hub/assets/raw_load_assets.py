@@ -4,7 +4,13 @@ from typing import Literal, NamedTuple
 
 import dlt
 import pandas as pd
-from dagster import AssetsDefinition, MaterializeResult, MetadataValue, asset
+from dagster import (
+    AssetsDefinition,
+    BackfillPolicy,
+    MaterializeResult,
+    MetadataValue,
+    asset,
+)
 from databricks.sdk.errors import NotFound
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 
@@ -129,6 +135,35 @@ def prepare_raw_dataframe(
     return df
 
 
+_PARTITION_TAG = "_partition_date"
+
+
+def combine_partition_frames(
+    frames: list[tuple[str, pd.DataFrame]], config: RawTableConfig
+) -> pd.DataFrame:
+    """Merge prepared frames of several partitions; the latest date wins.
+
+    Annual endpoints repeat the same rows in every daily partition, so a
+    multi-day batch must keep one version per key (upsert) or per slice
+    (delete-insert, where identical rows within a partition are legitimate).
+    """
+    tagged = pd.concat(
+        [frame.assign(**{_PARTITION_TAG: date}) for date, frame in frames],
+        ignore_index=True,
+    )
+    key_columns = list(config.key_columns)
+    if config.strategy == "upsert":
+        latest = tagged.sort_values(_PARTITION_TAG, kind="stable").drop_duplicates(
+            subset=key_columns, keep="last"
+        )
+    else:
+        newest = tagged.groupby(key_columns, dropna=False)[_PARTITION_TAG].transform(
+            "max"
+        )
+        latest = tagged[tagged[_PARTITION_TAG] == newest]
+    return latest.drop(columns=[_PARTITION_TAG]).reset_index(drop=True)
+
+
 def load_raw_table(
     df: pd.DataFrame,
     config: RawTableConfig,
@@ -187,33 +222,49 @@ def _build_raw_load_asset(group_name: str, config: RawTableConfig):
         kinds=["databricks", "dlt"],
         # One MERGE at a time per Delta table; concurrent MERGEs conflict.
         pool=asset_name,
+        # A backfill loads all its partitions in one run and one MERGE per
+        # table, instead of one small MERGE per partition queued on the pool.
+        backfill_policy=BackfillPolicy.single_run(),
     )
     def _raw_load_asset(
         context,
         databricks_volume_resource: DatabricksVolumeResource,
         databricks_dlt_resource: DatabricksDltResource,
     ):
-        dimensions = context.partition_key.keys_by_dimension
-        city_name = dimensions.get("city")
-        partition_date_str = dimensions.get("date")
         table = (
             f"{databricks_dlt_resource.catalog}.{RAW_DATASET}."
             f"{config.endpoint}"
         )
 
-        source_df = _download_source(
-            databricks_volume_resource,
-            config.endpoint,
-            city_name,
-            partition_date_str,
-        )
-        if source_df.empty:
-            # Never run delete-insert with an empty batch: keep the last slice.
+        # Any invalid partition (missing parquet, bad key) fails the batch.
+        prepared = []
+        for key in context.partition_keys:
+            dimensions = daily_city_partition.get_partition_key_from_str(
+                key
+            ).keys_by_dimension
+            city_name = dimensions["city"]
+            partition_date_str = dimensions["date"]
+            source_df = _download_source(
+                databricks_volume_resource,
+                config.endpoint,
+                city_name,
+                partition_date_str,
+            )
+            if source_df.empty:
+                # Never run delete-insert with an empty frame: keep the slice.
+                continue
+            prepared.append(
+                (
+                    partition_date_str,
+                    prepare_raw_dataframe(
+                        source_df, config, city_name, partition_date_str[:4]
+                    ),
+                )
+            )
+        if not prepared:
             return MaterializeResult(metadata={"rows": 0, "table": table})
 
-        raw_df = prepare_raw_dataframe(
-            source_df, config, city_name, partition_date_str[:4]
-        )
+        raw_df = combine_partition_frames(prepared, config)
         # Per-run dlt working dir: concurrent partitions must not share local
         # pipeline state; the canonical state lives in the destination.
         with tempfile.TemporaryDirectory() as pipelines_dir:
@@ -227,6 +278,7 @@ def _build_raw_load_asset(group_name: str, config: RawTableConfig):
         return MaterializeResult(
             metadata={
                 "rows": len(raw_df),
+                "partitions": len(context.partition_keys),
                 "table": table,
                 "load_id": load_id,
                 "strategy": config.strategy,

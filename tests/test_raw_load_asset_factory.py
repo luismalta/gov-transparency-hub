@@ -4,7 +4,7 @@ import dlt
 import duckdb
 import pandas as pd
 import pytest
-from dagster import AssetKey, MultiPartitionKey, materialize
+from dagster import AssetKey, BackfillPolicy, MultiPartitionKey, materialize
 from databricks.sdk.errors import NotFound
 
 from gov_transparency_hub.assets.raw_load_assets import (
@@ -114,3 +114,50 @@ def test_missing_parquet_fails_with_actionable_message(resources):
 
     with pytest.raises(FileNotFoundError, match="Materialize df_licitacoes"):
         materialize([asset], resources=resources, partition_key=PARTITION)
+
+
+# Adjacent cities in CITY_LIST, so the multi-partition range covers exactly two.
+RANGE_TAGS = {
+    "dagster/asset_partition_range_start": "tiradentes|2025-01-02",
+    "dagster/asset_partition_range_end": "saojoaodelrei|2025-01-02",
+}
+SAOJOAO_PATH = (
+    "saojoaodelrei/licitacoes/saojoaodelrei-licitacoes-2025-01-02.parquet"
+)
+
+
+def test_raw_assets_backfill_in_a_single_run():
+    [asset] = build_raw_load_assets("raw_reports", [LICITACOES])
+
+    assert asset.backfill_policy == BackfillPolicy.single_run()
+
+
+def test_partition_range_is_loaded_once(resources):
+    FakeVolumeResource.frames[EXPECTED_PATH] = pd.DataFrame(
+        {"numeroDoProcesso": ["1/2025"], "unidade_gestora": ["1"]}
+    )
+    FakeVolumeResource.frames[SAOJOAO_PATH] = pd.DataFrame(
+        {"numeroDoProcesso": ["7/2025"], "unidade_gestora": ["1"]}
+    )
+    [asset] = build_raw_load_assets("raw_reports", [LICITACOES])
+
+    result = materialize([asset], resources=resources, tags=RANGE_TAGS)
+
+    assert result.success
+    with duckdb.connect(resources["databricks_dlt_resource"].duckdb_path) as c:
+        cities = c.sql(
+            "select municipio from raw.licitacoes order by 1"
+        ).fetchall()
+        loads = c.sql("select count(*) from raw._dlt_loads").fetchone()[0]
+    assert cities == [("saojoaodelrei",), ("tiradentes",)]
+    assert loads == 1
+
+
+def test_missing_partition_fails_the_batch(resources):
+    FakeVolumeResource.frames[EXPECTED_PATH] = pd.DataFrame(
+        {"numeroDoProcesso": ["1/2025"], "unidade_gestora": ["1"]}
+    )
+    [asset] = build_raw_load_assets("raw_reports", [LICITACOES])
+
+    with pytest.raises(FileNotFoundError, match="saojoaodelrei"):
+        materialize([asset], resources=resources, tags=RANGE_TAGS)
