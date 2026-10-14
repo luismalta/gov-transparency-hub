@@ -1,1 +1,1 @@
-{{ classification_dimension('stg_categorias_economicas', 'categoria_economica_sk') }}
+{{ conformed_dimension('stg_categorias_economicas', 'categoria_economica_sk', [('stg_despesa', 'categoria_economica_codigo', 'categoria_economica_nome'), ('stg_orcamento_anual_de_despesa', 'categoria_economica_codigo', 'categoria_economica_nome')]) }}

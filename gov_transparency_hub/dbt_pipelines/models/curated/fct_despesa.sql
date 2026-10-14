@@ -38,9 +38,9 @@ left join {{ ref('dim_municipio') }} as mun
 left join {{ ref('dim_unidade_gestora') }} as ug
     on ug.municipio = d.municipio
     and ug.unidade_gestora = d.unidade_gestora
--- Classification joins use the partition year, not exercicio: restos a pagar
--- (OP from older exercícios) are classified with the cadastro of the year
--- they were paid in.
+-- Classification dims are conformed per (municipio, ano_referencia, codigo).
+-- Join on the partition year, not exercicio: restos a pagar (OP from older
+-- exercícios) are classified with the cadastro of the year they were paid in.
 {%- for alias, dim, code in [
     ('uo', 'dim_unidade_orcamentaria', 'unidade_orcamentaria_codigo'),
     ('fn', 'dim_funcao', 'funcao_codigo'),
@@ -52,7 +52,6 @@ left join {{ ref('dim_unidade_gestora') }} as ug
 ] %}
 left join {{ ref(dim) }} as {{ alias }}
     on {{ alias }}.municipio = d.municipio
-    and {{ alias }}.unidade_gestora = d.unidade_gestora
     and {{ alias }}.ano_referencia = d.ano_referencia
     and {{ alias }}.codigo = d.{{ code }}
 {%- endfor %}

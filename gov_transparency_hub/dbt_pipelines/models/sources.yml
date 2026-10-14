@@ -32,3 +32,6 @@ sources:
       - name: fontes_de_recursos
         config:
           meta: {dagster: {asset_key: ["raw_fontes_de_recursos"]}}
+      - name: orcamento_anual_de_despesa
+        config:
+          meta: {dagster: {asset_key: ["raw_orcamento_anual_de_despesa"]}}

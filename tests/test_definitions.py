@@ -34,3 +34,20 @@ def test_dbt_models_are_grouped_by_layer():
     assert graph.get(AssetKey(["stg", "stg_despesa"])).group_name == "dbt_staging"
     assert graph.get(AssetKey(["curated", "fct_despesa"])).group_name == "curated"
     assert graph.get(AssetKey(["curated", "municipios"])).group_name == "curated"
+
+
+def test_budget_staging_depends_on_raw_asset():
+    graph = defs.resolve_asset_graph()
+
+    assert graph.get(
+        AssetKey(["stg", "stg_orcamento_anual_de_despesa"])
+    ).parent_keys == {AssetKey("raw_orcamento_anual_de_despesa")}
+
+
+def test_runs_execute_at_most_four_steps_in_parallel():
+    # Steps within a run are mostly I/O bound (portal API, Databricks), so they
+    # run in parallel; the cap keeps a 5-run backfill around 20 processes.
+    executor = defs.resolve_implicit_global_asset_job_def().executor_def
+
+    assert executor.name == "multiprocess"
+    assert executor.apply_config_mapping({}).value["config"]["max_concurrent"] == 4

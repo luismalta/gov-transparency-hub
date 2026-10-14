@@ -20,58 +20,79 @@ models:
     columns:
       - name: unidade_orcamentaria_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_funcao
     columns:
       - name: funcao_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_subfuncao
     columns:
       - name: subfuncao_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_programa
     columns:
       - name: programa_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_acao
     description: Projeto/atividade (portal field projetoAtividade).
     columns:
       - name: acao_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_categoria_economica
     columns:
       - name: categoria_economica_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_fonte_recurso
     columns:
       - name: fonte_recurso_sk
         data_tests: [unique, not_null]
+      - name: origem
+        data_tests:
+          - accepted_values: {values: [cadastro, fato]}
     data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [municipio, unidade_gestora, ano_referencia, codigo]
+          combination_of_columns: [municipio, ano_referencia, codigo]
 
   - name: dim_credor
     description: >
@@ -145,6 +166,34 @@ models:
       - name: data_pagamento_sk
         data_tests: [{relationships: {to: ref('dim_data'), field: data_sk}}]
 
+  - name: fct_orcamento_despesa
+    description: >
+      Annual budget per ficha (municipio, ano_referencia, ficha). Snapshot of
+      the last raw load: raw upserts per partition, so saldo_atual and
+      valor_atualizado reflect the latest load only (no history).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [municipio, ano_referencia, ficha]
+    columns:
+      - name: orcamento_despesa_sk
+        data_tests: [unique, not_null]
+      - name: valor_orcado
+        data_tests: [not_null]
+      - name: municipio_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_municipio'), field: municipio_sk}}]
+      - name: unidade_orcamentaria_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_unidade_orcamentaria'), field: unidade_orcamentaria_sk}}]
+      - name: funcao_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_funcao'), field: funcao_sk}}]
+      - name: subfuncao_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_subfuncao'), field: subfuncao_sk}}]
+      - name: programa_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_programa'), field: programa_sk}}]
+      - name: acao_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_acao'), field: acao_sk}}]
+      - name: categoria_economica_sk
+        data_tests: [not_null, {relationships: {to: ref('dim_categoria_economica'), field: categoria_economica_sk}}]
+
 unit_tests:
   - name: fct_despesa_keeps_op_variants_apart
     model: fct_despesa
@@ -182,3 +231,32 @@ unit_tests:
       rows:
         - {tipo_descricao: 'Ordem de Pagamento', despesa_sk: '825a7d34b9531fdfbce6b91c5cb0758a'}
         - {tipo_descricao: 'Restos a pagar', despesa_sk: '651b38b1df5cdb6504ae959a0285ad98'}
+
+  - name: dim_programa_conformed_members
+    model: dim_programa
+    given:
+      - input: ref('stg_programas')
+        rows:
+          - {municipio: m, unidade_gestora: '1', ano_referencia: '2025', codigo: '0001', nome: 'GESTAO'}
+          - {municipio: m, unidade_gestora: '2', ano_referencia: '2025', codigo: '0001', nome: 'GESTAO'}
+          - {municipio: m, unidade_gestora: '3', ano_referencia: '2025', codigo: '0001', nome: 'GESTÃO'}
+          - {municipio: m, unidade_gestora: '1', ano_referencia: '2025', codigo: '0002', nome: 'B'}
+          - {municipio: m, unidade_gestora: '2', ano_referencia: '2025', codigo: '0002', nome: 'A'}
+          - {municipio: m, unidade_gestora: '1', ano_referencia: '2025', codigo: '0003', nome: null}
+          - {municipio: m, unidade_gestora: '2', ano_referencia: '2025', codigo: '0003', nome: null}
+          - {municipio: m, unidade_gestora: '3', ano_referencia: '2025', codigo: '0003', nome: 'COM NOME'}
+          - {municipio: m, unidade_gestora: '1', ano_referencia: '2025', codigo: '0004', nome: null}
+      - input: ref('stg_despesa')
+        rows:
+          - {municipio: m, ano_referencia: '2025', programa_codigo: '0001', programa_nome: 'NOME DO FATO'}
+          - {municipio: m, ano_referencia: '2025', programa_codigo: '0004', programa_nome: 'SO NO FATO'}
+      - input: ref('stg_orcamento_anual_de_despesa')
+        rows:
+          - {municipio: m, ano_referencia: '2025', programa_codigo: '0101', programa_nome: 'LEGISLATIVO'}
+    expect:
+      rows:
+        - {codigo: '0001', nome: 'GESTAO', origem: cadastro}
+        - {codigo: '0002', nome: 'A', origem: cadastro}
+        - {codigo: '0101', nome: 'LEGISLATIVO', origem: fato}
+        - {codigo: '0003', nome: 'COM NOME', origem: cadastro}
+        - {codigo: '0004', nome: 'SO NO FATO', origem: fato}

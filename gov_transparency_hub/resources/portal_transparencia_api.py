@@ -12,6 +12,10 @@ TIMEOUT = 30
 # Some report endpoints prepend HTML comments and a <style> block to the JSON body.
 HTML_PREFIX = re.compile(r"^\s*(?:<!--.*?-->\s*|<style>.*?</style>\s*)+", re.IGNORECASE | re.DOTALL)
 MAX_RETRIES = 3
+# Gateway/proxy errors (incl. Cloudflare 52x) mean the portal is overloaded or
+# slow; they are transient, so retry them with a longer backoff.
+GATEWAY_ERRORS = (502, 503, 504, 520, 522, 524)
+GATEWAY_BACKOFF_SECONDS = 10
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,11 +48,14 @@ def fetch(url: str, params: dict | None = None, timeout: int = TIMEOUT) -> dict:
                 return json.loads(_strip_html_prefix(_decode(resp.read())))
         except HTTPError as exc:
             # erros permanentes: não adianta tentar de novo
-            if exc.code in (403, 422, 524):
+            if exc.code in (403, 422):
                 raise
             if attempt == MAX_RETRIES:
                 raise
-            wait = 2 ** attempt
+            if exc.code in GATEWAY_ERRORS:
+                wait = GATEWAY_BACKOFF_SECONDS * 2 ** (attempt - 1)
+            else:
+                wait = 2 ** attempt
             log.warning("  attempt %d/%d failed (%s), retrying in %ds", attempt, MAX_RETRIES, exc, wait)
             time.sleep(wait)
         except (URLError, TimeoutError) as exc:

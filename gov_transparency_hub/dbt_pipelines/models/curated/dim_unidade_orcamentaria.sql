@@ -1,1 +1,1 @@
-{{ classification_dimension('stg_unidades_orcamentarias', 'unidade_orcamentaria_sk') }}
+{{ conformed_dimension('stg_unidades_orcamentarias', 'unidade_orcamentaria_sk', [('stg_despesa', 'unidade_orcamentaria_codigo', 'unidade_orcamentaria_nome'), ('stg_orcamento_anual_de_despesa', 'unidade_orcamentaria_codigo', 'unidade_orcamentaria_nome')]) }}

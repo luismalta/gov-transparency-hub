@@ -18,7 +18,7 @@ run_coordinator:
 
 concurrency:
   runs:
-    max_concurrent_runs: 15
+    max_concurrent_runs: 5
   pools:
     # raw_<table> pools: one MERGE at a time per Delta table.
     default_limit: 1
@@ -26,3 +26,9 @@ concurrency:
 run_retries:
   enabled: true
   max_retries: 3
+# Frees pool slots of runs that ended without releasing them (killed or
+# canceled from outside); with pool limits of 1 a leaked slot blocks a raw
+# table forever. Also marks runs whose worker process died as failed.
+run_monitoring:
+  enabled: true
+  free_slots_after_run_end_seconds: 60
