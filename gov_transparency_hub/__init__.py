@@ -1,17 +1,14 @@
 import os
-from dagster import Definitions, load_assets_from_modules
-from .assets import city_revenue, city_expenses, metrics_report
-from .jobs import revenue_update_job, expense_update_job
-from .resources import RESOURCES_LOCAL, RESOURCES_STAGING, RESOURCES_PROD
-from .schedules import revenue_update_schedule, expense_update_schedule
+
+from dagster import Definitions, load_assets_from_modules, multiprocess_executor
+
+from .assets import dbt_curated, df_reports, df_resources, raw_reports, raw_resources
+from .resources import RESOURCES_LOCAL, RESOURCES_PROD, RESOURCES_STAGING
 from .sensors import discord_on_run_failure
-from .asset_checks import all_asset_checks
 
-city_revenue_assets = load_assets_from_modules([city_revenue, city_expenses, metrics_report])
-
-all_assets = [*city_revenue_assets]
-all_jobs = [revenue_update_job, expense_update_job]
-all_schedule = [revenue_update_schedule, expense_update_schedule]
+all_assets = load_assets_from_modules(
+    [df_resources, df_reports, raw_reports, raw_resources, dbt_curated]
+)
 all_sensors = [discord_on_run_failure]
 resources_by_deployment_name = {
     "prod": RESOURCES_PROD,
@@ -19,15 +16,13 @@ resources_by_deployment_name = {
     "local": RESOURCES_LOCAL,
 }
 
-
-
 deployment_name = os.environ.get("DAGSTER_DEPLOYMENT", "local")
 
 defs = Definitions(
     assets=all_assets,
-    jobs=all_jobs,
-    schedules=all_schedule,
+    # Steps are mostly I/O bound (portal API, Databricks), so they run in
+    # parallel; the cap bounds processes and memory during backfills.
+    executor=multiprocess_executor.configured({"max_concurrent": 4}),
     sensors=all_sensors,
-    asset_checks=all_asset_checks,
     resources=resources_by_deployment_name[deployment_name],
 )

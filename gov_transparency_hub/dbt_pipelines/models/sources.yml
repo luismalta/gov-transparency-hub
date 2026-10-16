@@ -1,25 +1,37 @@
 version: 2
 
 sources:
-  - name: dagster
+  - name: raw
     schema: raw
+    description: Tables loaded by the raw_<endpoint> dlt assets; every column is a string.
     tables:
-      - name: expense_details
-        meta:
-          dagster:
-            asset_key: ["load_raw_expense_details"]
-      
-      - name: expense_itens
-        meta:
-          dagster:
-            asset_key: ["load_raw_expense_itens"]
-      
-      - name: expense_invoices
-        meta:
-          dagster:
-            asset_key: ["load_raw_expense_invoices"]
-
-      - name: revenue_details
-        meta:
-          dagster:
-            asset_key: ["load_raw_revenue_details"]
+      - name: despesa
+        config:
+          meta: {dagster: {asset_key: ["raw_despesa"]}}
+      - name: unidades_gestoras
+        config:
+          meta: {dagster: {asset_key: ["raw_unidades_gestoras"]}}
+      - name: unidades_orcamentarias
+        config:
+          meta: {dagster: {asset_key: ["raw_unidades_orcamentarias"]}}
+      - name: funcoes
+        config:
+          meta: {dagster: {asset_key: ["raw_funcoes"]}}
+      - name: subfuncoes
+        config:
+          meta: {dagster: {asset_key: ["raw_subfuncoes"]}}
+      - name: programas
+        config:
+          meta: {dagster: {asset_key: ["raw_programas"]}}
+      - name: projetos
+        config:
+          meta: {dagster: {asset_key: ["raw_projetos"]}}
+      - name: categorias_economicas
+        config:
+          meta: {dagster: {asset_key: ["raw_categorias_economicas"]}}
+      - name: fontes_de_recursos
+        config:
+          meta: {dagster: {asset_key: ["raw_fontes_de_recursos"]}}
+      - name: orcamento_anual_de_despesa
+        config:
+          meta: {dagster: {asset_key: ["raw_orcamento_anual_de_despesa"]}}

@@ -1,12 +1,11 @@
 dbt_pipelines:
+  target: dev
   outputs:
     dev:
-      dbname: gov_transparency_hub
-      host: localhost
-      pass: postgres
-      port: 5432
-      schema: public
-      threads: 1
-      type: postgres
-      user: postgres
-  target: dev
+      type: databricks
+      host: "{{ env_var('DATABRICKS_HOST') | replace('https://', '') | replace('http://', '') | replace('/', '') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN', env_var('DATABRICKS_TOKEN_DEV', '')) }}"
+      catalog: "{{ env_var('DATABRICKS_CATALOG') }}"
+      schema: stg
+      threads: 4

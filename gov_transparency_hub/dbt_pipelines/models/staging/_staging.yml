@@ -1,0 +1,120 @@
+version: 2
+
+unit_tests:
+  - name: stg_despesa_codes
+    model: stg_despesa
+    given:
+      - input: source('raw', 'despesa')
+        rows:
+          - {municipio: tiradentes, unidade_gestora: '1', ano_referencia: '2025', empenho: '00001-000',
+             tipo: 'EO - Empenho Ordinário', exercicio: '2025', valor: '10.0',
+             unidade: '02.006.001 - SECRETARIA', funcao: '04 - ADMINISTRAÇÃO',
+             subfuncao: '122 - ADMINISTRAÇÃO GERAL', programa: '0004 - GESTÃO',
+             projeto_atividade: '2.801 - MANUT. - VEREADORES',
+             categoria_economica: '3.3.90.39.00 - OUTROS SERVIÇOS',
+             fonte_de_recurso: '1.500.000  - RECURSOS NÃO VINCULADOS',
+             data_do_empenho: '2025-01-02'}
+    expect:
+      rows:
+        - {tipo_codigo: EO, tipo_descricao: 'Empenho Ordinário', natureza: empenho,
+           unidade_orcamentaria_codigo: '02006001', funcao_codigo: '04', subfuncao_codigo: '122',
+           programa_codigo: '0004', acao_codigo: '2801', categoria_economica_codigo: '33903900',
+           fonte_recurso_codigo: '1500000', unidade_orcamentaria_nome: SECRETARIA,
+           funcao_nome: 'ADMINISTRAÇÃO', subfuncao_nome: 'ADMINISTRAÇÃO GERAL', programa_nome: 'GESTÃO',
+           acao_nome: 'MANUT. - VEREADORES', categoria_economica_nome: 'OUTROS SERVIÇOS',
+           fonte_recurso_nome: 'RECURSOS NÃO VINCULADOS'}
+
+  - name: stg_despesa_natureza
+    model: stg_despesa
+    given:
+      - input: source('raw', 'despesa')
+        rows:
+          - {empenho: '1', tipo: 'OP - Ordem de Pagamento', exercicio: '2024', ano_referencia: '2025', valor: '1.0', data_do_empenho: '2025-01-02'}
+          - {empenho: '2', tipo: 'EE - Empenho Estimativo', exercicio: '2025', ano_referencia: '2025', valor: '1.0', data_do_empenho: '2025-01-02'}
+          - {empenho: '3', tipo: 'EG - Empenho Global', exercicio: '2025', ano_referencia: '2025', valor: '1.0', data_do_empenho: '2025-01-02'}
+          - {empenho: '4', tipo: 'AN - Empenho Anulação', exercicio: '2025', ano_referencia: '2025', valor: '1.0', data_do_empenho: '2025-01-02'}
+    expect:
+      rows:
+        - {empenho: '1', tipo_codigo: OP, natureza: ordem_pagamento, exercicio: '2024', ano_referencia: '2025'}
+        - {empenho: '2', tipo_codigo: EE, natureza: empenho, exercicio: '2025', ano_referencia: '2025'}
+        - {empenho: '3', tipo_codigo: EG, natureza: empenho, exercicio: '2025', ano_referencia: '2025'}
+        - {empenho: '4', tipo_codigo: AN, natureza: null, exercicio: '2025', ano_referencia: '2025'}
+
+  - name: stg_despesa_credor_formats
+    model: stg_despesa
+    given:
+      - input: source('raw', 'despesa')
+        rows:
+          - {empenho: '1', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: 'INSS- INSTITUTO NACIONAL DO SEGURO SOCIAL - CPF/CNPJ: 29.979.036/0001-40'}
+          - {empenho: '2', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: 'MARIA DA SILVA - CPF/CNPJ: ***.123.456-**'}
+          - {empenho: '3', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: 'JOSE SOUZA - CPF/CNPJ: ***123.4567-**'}
+          - {empenho: '4', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: 'EMPRESA X - CPF/CNPJ: ***979.036/0001-**'}
+          - {empenho: '5', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: 'SEM DOCUMENTO'}
+          - {empenho: '6', valor: '1.0', data_do_empenho: '2025-01-02', tipo: 'EO - x',
+             credor: ''}
+    expect:
+      rows:
+        - {empenho: '1', credor_nome: 'INSS- INSTITUTO NACIONAL DO SEGURO SOCIAL', credor_documento: '29.979.036/0001-40', credor_tipo_pessoa: PJ}
+        - {empenho: '2', credor_nome: 'MARIA DA SILVA', credor_documento: '***.123.456-**', credor_tipo_pessoa: PF}
+        - {empenho: '3', credor_nome: 'JOSE SOUZA', credor_documento: '***123.4567-**', credor_tipo_pessoa: PF}
+        - {empenho: '4', credor_nome: 'EMPRESA X', credor_documento: '***979.036/0001-**', credor_tipo_pessoa: PJ}
+        - {empenho: '5', credor_nome: 'SEM DOCUMENTO', credor_documento: null, credor_tipo_pessoa: null}
+        - {empenho: '6', credor_nome: null, credor_documento: null, credor_tipo_pessoa: null}
+
+  - name: stg_despesa_dates_and_valor
+    model: stg_despesa
+    given:
+      - input: source('raw', 'despesa')
+        rows:
+          - {empenho: '1', tipo: 'EO - x', valor: '404.8', data_do_empenho: '2025-01-02',
+             data_de_liquidacao: '', data_de_pagamento: null}
+          - {empenho: '2', tipo: 'EO - x', valor: '1234567.89', data_do_empenho: '2025-01-03',
+             data_de_liquidacao: '2025-01-20', data_de_pagamento: '2025-01-21'}
+    expect:
+      rows:
+        - {empenho: '1', valor: 404.80, data_empenho: '2025-01-02', data_liquidacao: null, data_pagamento: null}
+        - {empenho: '2', valor: 1234567.89, data_empenho: '2025-01-03', data_liquidacao: '2025-01-20', data_pagamento: '2025-01-21'}
+
+  - name: stg_cadastro_trims_and_normalizes
+    model: stg_categorias_economicas
+    given:
+      - input: source('raw', 'categorias_economicas')
+        rows:
+          - {municipio: tiradentes, unidade_gestora: '1', ano_referencia: '2025', id: ' 3.3.90.39.00 ', nome: ' OUTROS SERVIÇOS - PJ '}
+    expect:
+      rows:
+        - {municipio: tiradentes, unidade_gestora: '1', ano_referencia: '2025', codigo: '33903900', nome: 'OUTROS SERVIÇOS - PJ'}
+
+  - name: stg_unidades_gestoras_renames_id
+    model: stg_unidades_gestoras
+    given:
+      - input: source('raw', 'unidades_gestoras')
+        rows:
+          - {municipio: tiradentes, id: '1', nome: 'Prefeitura Municipal de Tiradentes'}
+    expect:
+      rows:
+        - {municipio: tiradentes, unidade_gestora: '1', nome: 'Prefeitura Municipal de Tiradentes'}
+
+  - name: stg_orcamento_parses_codes_and_values
+    model: stg_orcamento_anual_de_despesa
+    given:
+      - input: source('raw', 'orcamento_anual_de_despesa')
+        rows:
+          - {municipio: tiradentes, ano_referencia: '2025', ficha: ' 30001 ',
+             unidade_orcamentaria: '01.001.000 - CÂMARA MUNICIPAL', funcao: '01 - LEGISLATIVA',
+             subfuncao: '031 - ACAO LEGISLATIVA', programa: '0101 - ATIVIDADES LEGISLATIVAS',
+             projeto: '2.801 - MANUTENÇÃO DE DIÁRIAS', conta: '33901400 - DIÁRIAS - CIVIL',
+             valor_orcado: '18000', valor_suplementado_ou_anulado: '-1500.5',
+             valor_atualizado: '16499.5', saldo_atual: '6920'}
+    expect:
+      rows:
+        - {ficha: '30001', unidade_orcamentaria_codigo: '01001000', unidade_orcamentaria_nome: 'CÂMARA MUNICIPAL',
+           funcao_codigo: '01', subfuncao_codigo: '031', programa_codigo: '0101', acao_codigo: '2801',
+           acao_nome: 'MANUTENÇÃO DE DIÁRIAS', categoria_economica_codigo: '33901400',
+           categoria_economica_nome: 'DIÁRIAS - CIVIL', valor_orcado: 18000.00,
+           valor_suplementado_ou_anulado: -1500.50, valor_atualizado: 16499.50, saldo_atual: 6920.00}
